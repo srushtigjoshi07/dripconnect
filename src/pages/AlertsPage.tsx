@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useSimulation } from '../context/SimulationContext';
 import { AlertItem, AlertSeverity, AlertWorkflowStatus } from '../types';
-import { InterventionModal } from '../components/alerts/InterventionModal';
 import {
   BellRing,
   ShieldAlert,
@@ -30,6 +29,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
     beginIntervention,
     triggerScenario,
     activeResponders,
+    openInterventionModal,
   } = useSimulation();
 
   const [severityFilter, setSeverityFilter] = useState<'ALL' | AlertSeverity>('ALL');
@@ -37,7 +37,6 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
   const [bedFilter, setBedFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState<string>('');
-  const [selectedAlertForIntervention, setSelectedAlertForIntervention] = useState<AlertItem | null>(null);
 
   // Filtered alerts
   const filteredAlerts = alerts.filter(alert => {
@@ -331,7 +330,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
               return (
                 <div
                   key={alert.id}
-                  onClick={() => setSelectedAlertForIntervention(alert)}
+                  onClick={() => openInterventionModal(alert)}
                   className={`p-3.5 hover:bg-slate-50 cursor-pointer transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 ${
                     alert.isOverdue && !isResolved
                       ? 'bg-red-50/30'
@@ -465,7 +464,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
                       <button
                         onClick={() => {
                           beginIntervention(alert.id, currentNurseName);
-                          setSelectedAlertForIntervention(alert);
+                          openInterventionModal(alert);
                         }}
                         className="px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs"
                       >
@@ -477,7 +476,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
                     {/* State 3: In Progress -> Verify & Complete */}
                     {isInProgress && (
                       <button
-                        onClick={() => setSelectedAlertForIntervention(alert)}
+                        onClick={() => openInterventionModal(alert)}
                         className="px-3 py-1.5 rounded bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold transition-colors flex items-center gap-1 shadow-xs"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
@@ -488,7 +487,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
                     {/* State 4: Resolved -> Audit Details */}
                     {isResolved && (
                       <button
-                        onClick={() => setSelectedAlertForIntervention(alert)}
+                        onClick={() => openInterventionModal(alert)}
                         className="px-3 py-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
                       >
                         Audit Timeline
@@ -502,13 +501,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
         )}
       </div>
 
-      {/* Intervention & Verification Workflow Modal */}
-      {selectedAlertForIntervention && (
-        <InterventionModal
-          alert={selectedAlertForIntervention}
-          onClose={() => setSelectedAlertForIntervention(null)}
-        />
-      )}
+      {/* Intervention modal is the global one mounted in App (GlobalInterventionModal) */}
     </div>
   );
 };

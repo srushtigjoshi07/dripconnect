@@ -717,7 +717,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [buzzerActive, setBuzzerActive] = useState<boolean>(false);
   const [activeCall, setActiveCall] = useState<ActiveCallState | null>(null);
-  const [activeInterventionAlert, setActiveInterventionAlert] = useState<AlertItem | null>(null);
+  // Only the ID is stored; the exposed alert is derived live from the alerts
+  // array so the intervention modal always reflects the current workflow
+  // status (acknowledged -> in progress -> resolved) instead of a stale
+  // snapshot taken when the modal was opened.
+  const [activeInterventionAlertId, setActiveInterventionAlertId] = useState<string | null>(null);
   const [simulatedTime, setSimulatedTime] = useState<Date>(new Date());
 
   // Load event history from localStorage with realistic initial seed
@@ -1026,7 +1030,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       );
       if (existing) return;
 
-      const newAlertId = `ALT-${Date.now().toString().slice(-6)}`;
+      const newAlertId = `ALT-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 5)}`;
       const nowIso = new Date().toISOString();
       const nowTime = new Date().toLocaleTimeString();
 
@@ -1974,12 +1978,15 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const responder = nurseName || settingsRef.current.responders[0].name;
       const nowTime = new Date().toLocaleTimeString();
 
-      let targetBedId = '';
+      // Resolve the bed synchronously from the live alerts ref. (Reading it
+      // from inside the setAlerts updater does not work: React runs updaters
+      // after this function returns, so the physical-action correction below
+      // would never execute.)
+      const targetBedId = alertsRef.current.find(a => a.id === alertId)?.bedId ?? '';
 
       setAlerts(prev =>
         prev.map(a => {
           if (a.id === alertId) {
-            targetBedId = a.bedId;
             return {
               ...a,
               workflowStatus: 'INTERVENTION_IN_PROGRESS' as AlertWorkflowStatus,
@@ -2023,6 +2030,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                   noDropDurationSec: 0,
                   abnormalFlowDurationSec: 0,
                   activeScenarioId: 'NORMAL',
+                  faultCondition: 'NORMAL' as BedFaultCondition,
                 };
               } else if (appliedActionId === 'REPLACE_BAG_1000') {
                 return {
@@ -2038,6 +2046,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                   noDropDurationSec: 0,
                   abnormalFlowDurationSec: 0,
                   activeScenarioId: 'NORMAL',
+                  faultCondition: 'NORMAL' as BedFaultCondition,
                 };
               } else if (appliedActionId === 'CLEAR_KINK') {
                 return {
@@ -2049,6 +2058,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                   isActive: true,
                   isPaused: false,
                   activeScenarioId: 'NORMAL',
+                  faultCondition: 'NORMAL' as BedFaultCondition,
                 };
               } else if (appliedActionId === 'RECALIBRATE_RATE') {
                 return {
@@ -2060,6 +2070,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                   isActive: true,
                   isPaused: false,
                   activeScenarioId: 'NORMAL',
+                  faultCondition: 'NORMAL' as BedFaultCondition,
                 };
               }
             }
@@ -2298,11 +2309,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const openInterventionModal = useCallback((alert: AlertItem) => {
-    setActiveInterventionAlert(alert);
+    setActiveInterventionAlertId(alert.id);
   }, []);
 
   const closeInterventionModal = useCallback(() => {
-    setActiveInterventionAlert(null);
+    setActiveInterventionAlertId(null);
   }, []);
 
   const updateSettings = useCallback(
@@ -2681,6 +2692,12 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       addEvent,
     ]
   );
+
+  // Live view of the alert whose intervention modal is open (null when closed
+  // or when the alert no longer exists).
+  const activeInterventionAlert = activeInterventionAlertId
+    ? (alerts.find(a => a.id === activeInterventionAlertId) ?? null)
+    : null;
 
   return (
     <SimulationContext.Provider
