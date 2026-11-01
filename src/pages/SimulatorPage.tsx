@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSimulation } from '../context/SimulationContext';
 import { BedCard } from '../components/ward/BedCard';
 import { SimulationControlPanel } from '../components/simulation/SimulationControlPanel';
@@ -14,6 +14,9 @@ import {
   Moon,
   Clock,
   RotateCcw,
+  Sparkles,
+  HeartPulse,
+  LayoutGrid,
 } from 'lucide-react';
 
 interface SimulatorPageProps {
@@ -30,7 +33,21 @@ export const SimulatorPage: React.FC<SimulatorPageProps> = ({ onNavigate }) => {
     toggleShift,
     activeResponders,
     resetSimulation,
+    loadDemoConfiguration,
+    restoreNormalWard,
+    applyWardPreset,
   } = useSimulation();
+
+  const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
+
+  const confirmOrRun = (key: string, action: () => void) => {
+    if (pendingConfirm === key) {
+      action();
+      setPendingConfirm(null);
+    } else {
+      setPendingConfirm(key);
+    }
+  };
 
   const isNight = activeShift === 'NIGHT';
   const dutyStaff = activeResponders[0];
@@ -189,6 +206,93 @@ export const SimulatorPage: React.FC<SimulatorPageProps> = ({ onNavigate }) => {
           </div>
           <div className="text-[10px] text-slate-400 mt-0.5">Requiring verification</div>
         </div>
+      </div>
+
+      {/* Demonstration Mode */}
+      <div className="bg-white rounded-lg border border-teal-200 p-3.5 space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-teal-600" />
+            <h2 className="text-sm font-bold text-slate-900">Demonstration Mode</h2>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-50 border border-teal-200 text-teal-800 font-semibold">
+              Normal ward is the default — faults appear only when you load them
+            </span>
+          </div>
+          {pendingConfirm && (
+            <span className="text-[11px] text-amber-700 font-medium">
+              Click the highlighted button again to confirm.
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => confirmOrRun('load-demo', loadDemoConfiguration)}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              pendingConfirm === 'load-demo'
+                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                : 'bg-slate-900 hover:bg-slate-800 text-white'
+            }`}
+            title="Bed 01 Normal · Bed 02 Low Fluid · Bed 03 Blocked Line · Bed 04 High Flow · Bed 05 Low Flow · Bed 06 Empty Bottle"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-teal-300" />
+            <span>{pendingConfirm === 'load-demo' ? 'Confirm: Load Demo Configuration?' : 'Load Demo Configuration'}</span>
+          </button>
+
+          <button
+            onClick={() => confirmOrRun('restore', restoreNormalWard)}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors border ${
+              pendingConfirm === 'restore'
+                ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+            }`}
+            title="All beds back to 500 mL at 100 mL/h; event history preserved"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{pendingConfirm === 'restore' ? 'Confirm: Restore Normal Ward?' : 'Restore Normal Ward'}</span>
+          </button>
+
+          <span className="text-slate-300 mx-1">|</span>
+
+          <button
+            onClick={() => confirmOrRun('preset-mixed', () => applyWardPreset('MIXED_WARD'))}
+            className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium border transition-colors ${
+              pendingConfirm === 'preset-mixed'
+                ? 'bg-amber-500 text-white border-amber-500'
+                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+            }`}
+          >
+            {pendingConfirm === 'preset-mixed' ? 'Confirm Mixed Ward?' : 'Preset: Mixed Ward Conditions'}
+          </button>
+          <button
+            onClick={() => confirmOrRun('preset-critical', () => applyWardPreset('CRITICAL_EMERGENCY'))}
+            className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium border transition-colors flex items-center gap-1 ${
+              pendingConfirm === 'preset-critical'
+                ? 'bg-amber-500 text-white border-amber-500'
+                : 'bg-white hover:bg-red-50 text-red-700 border-red-200'
+            }`}
+          >
+            <HeartPulse className="w-3 h-3" />
+            {pendingConfirm === 'preset-critical' ? 'Confirm Critical Emergency?' : 'Preset: Critical Emergency'}
+          </button>
+          <button
+            onClick={() => confirmOrRun('preset-normal', () => applyWardPreset('ALL_NORMAL'))}
+            className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium border transition-colors ${
+              pendingConfirm === 'preset-normal'
+                ? 'bg-amber-500 text-white border-amber-500'
+                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
+            }`}
+          >
+            {pendingConfirm === 'preset-normal' ? 'Confirm All Normal?' : 'Preset: All Beds Normal'}
+          </button>
+        </div>
+
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          Demo configuration: Bed 01 Normal · Bed 02 Low Fluid · Bed 03 Blocked IV Line · Bed 04 High Flow (1.85×) ·
+          Bed 05 Low Flow (0.55×) · Bed 06 Empty Bottle. For a <strong>Custom Ward Setup</strong>, set each bed's fault
+          condition from its bed card below or from the bed's detail page — every bed runs on the same engine and the
+          others stay unchanged. Preset changes are recorded in Event History.
+        </p>
       </div>
 
       {/* Embedded Simulation & Speed Control Panel */}

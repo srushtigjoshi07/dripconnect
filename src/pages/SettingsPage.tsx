@@ -739,6 +739,52 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigate }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            {/* Default Initial Fluid Volume */}
+            <div>
+              <label htmlFor="default-initial-volume" className="block font-semibold text-slate-700 mb-1">
+                Default Initial Fluid Volume (mL)
+              </label>
+              <input
+                id="default-initial-volume"
+                type="number"
+                min="100"
+                max="2000"
+                step="50"
+                value={formState.defaultInitialVolume}
+                onChange={e =>
+                  setFormState(prev => ({
+                    ...prev,
+                    defaultInitialVolume: Number(e.target.value),
+                  }))
+                }
+                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-teal-500 font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-0.5">Default 500 mL. Used by bed reset and Restore Normal Ward.</p>
+            </div>
+
+            {/* Default Prescribed Flow Rate */}
+            <div>
+              <label htmlFor="default-prescribed-rate" className="block font-semibold text-slate-700 mb-1">
+                Default Prescribed Flow Rate (mL/h)
+              </label>
+              <input
+                id="default-prescribed-rate"
+                type="number"
+                min="10"
+                max="500"
+                step="5"
+                value={formState.defaultPrescribedRate}
+                onChange={e =>
+                  setFormState(prev => ({
+                    ...prev,
+                    defaultPrescribedRate: Number(e.target.value),
+                  }))
+                }
+                className="w-full p-2 bg-slate-50 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-teal-500 font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-0.5">Default 100 mL/h. Used by bed reset and Restore Normal Ward.</p>
+            </div>
+
             {/* Deviation Tolerance */}
             <div>
               <label htmlFor="flow-dev-tol" className="block font-semibold text-slate-700 mb-1">

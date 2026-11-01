@@ -22,6 +22,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -320,6 +322,30 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
                 </div>
               </div>
 
+              {/* Cumulative Drop Count */}
+              <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
+                <span className="text-[10px] font-medium text-slate-400 block">Drop Count (Total)</span>
+                <div className="text-sm font-bold font-mono text-slate-900 mt-0.5 tabular-nums">
+                  {Math.floor(selectedBed.dropCount || 0)} <span className="text-[10px] font-normal text-slate-500">drops</span>
+                </div>
+              </div>
+
+              {/* Drop Generation Status */}
+              <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
+                <span className="text-[10px] font-medium text-slate-400 block">Drop Generation</span>
+                <div
+                  className={`text-xs font-bold font-mono uppercase mt-1 ${
+                    selectedBed.isActive && !selectedBed.isPaused && selectedBed.dropRate > 0
+                      ? 'text-emerald-700'
+                      : 'text-red-700'
+                  }`}
+                >
+                  {selectedBed.isActive && !selectedBed.isPaused && selectedBed.dropRate > 0
+                    ? 'Active'
+                    : 'Stopped'}
+                </div>
+              </div>
+
               {/* Initial Volume */}
               <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
                 <span className="text-[10px] font-medium text-slate-400 block">Initial Capacity</span>
@@ -432,6 +458,39 @@ export const LiveMonitoringPage: React.FC<LiveMonitoringPageProps> = ({ onNaviga
                     isAnimationActive={false}
                   />
                 </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Fluid Volume Chart for THIS Bed */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-xs">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Fluid Volume Over Time ({selectedBed.bedNumber})
+              </h3>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {Math.round(selectedBed.remainingVolume)} mL remaining of {selectedBed.initialVolume} mL
+              </span>
+            </div>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={telemetryHistory} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="timeLabel" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" domain={[0, selectedBed.initialVolume]} />
+                  <Tooltip contentStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="remainingVolume"
+                    name="Remaining Volume (mL)"
+                    stroke="#0f766e"
+                    fill="#99f6e4"
+                    fillOpacity={0.45}
+                    strokeWidth={2}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>

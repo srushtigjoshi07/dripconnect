@@ -222,6 +222,9 @@ export const BedCard: React.FC<BedCardProps> = ({
                 {dropStatusText}
               </span>
             </div>
+            <div className="text-[10px] text-slate-500 font-mono mt-1">
+              Counted: {Math.floor(bed.dropCount || 0)} drops
+            </div>
           </div>
         </div>
 

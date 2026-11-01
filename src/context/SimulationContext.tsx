@@ -133,11 +133,12 @@ const INITIAL_BEDS: BedData[] = [
     prescribedRate: 100,
     actualRate: 100,
     dropFactor: 20,
-    dropRate: 33, // (100 * 20)/60 ≈ 33.3 gtt/min
+    dropRate: 33,
+    dropCount: 0,
     initialVolume: 500,
-    remainingVolume: 420,
-    infusedVolume: 80,
-    timeToEmptyMinutes: 252, // (420 / 100) * 60 = 252 min
+    remainingVolume: 500,
+    infusedVolume: 0,
+    timeToEmptyMinutes: 300,
     status: 'NORMAL',
     isActive: true,
     isPaused: false,
@@ -171,17 +172,18 @@ const INITIAL_BEDS: BedData[] = [
     actualRate: 100,
     dropFactor: 20,
     dropRate: 33,
+    dropCount: 0,
     initialVolume: 500,
-    remainingVolume: 20, // Low fluid approaching exhaustion (~12 min to empty)
-    infusedVolume: 480,
-    timeToEmptyMinutes: 12,
-    status: 'WARNING',
+    remainingVolume: 500,
+    infusedVolume: 0,
+    timeToEmptyMinutes: 300,
+    status: 'NORMAL',
     isActive: true,
     isPaused: false,
     noDropDurationSec: 0,
     abnormalFlowDurationSec: 0,
-    activeScenarioId: 'LOW_FLUID',
-    faultCondition: 'LOW_FLUID',
+    activeScenarioId: 'NORMAL',
+    faultCondition: 'NORMAL',
   },
   {
     id: 'bed-03',
@@ -205,20 +207,21 @@ const INITIAL_BEDS: BedData[] = [
       osmolarity: '308 mOsm/L',
     },
     prescribedRate: 100,
-    actualRate: 0, // Blocked line: 0 flow & 0 drops
+    actualRate: 100, // Blocked line: 0 flow & 0 drops
     dropFactor: 20,
-    dropRate: 0,
+    dropRate: 33,
+    dropCount: 0,
     initialVolume: 500,
-    remainingVolume: 340,
-    infusedVolume: 160,
-    timeToEmptyMinutes: null,
-    status: 'CRITICAL',
+    remainingVolume: 500,
+    infusedVolume: 0,
+    timeToEmptyMinutes: 300,
+    status: 'NORMAL',
     isActive: true,
     isPaused: false,
-    noDropDurationSec: 22, // Exceeds 20s blocked line threshold
+    noDropDurationSec: 0, // Exceeds 20s blocked line threshold
     abnormalFlowDurationSec: 0,
-    activeScenarioId: 'BLOCKED_LINE',
-    faultCondition: 'BLOCKED_LINE',
+    activeScenarioId: 'NORMAL',
+    faultCondition: 'NORMAL',
   },
   {
     id: 'bed-04',
@@ -242,20 +245,21 @@ const INITIAL_BEDS: BedData[] = [
       osmolarity: '252 mOsm/L',
     },
     prescribedRate: 100,
-    actualRate: 185, // High flow: +85% deviation exceeds 20% tolerance
+    actualRate: 100, // High flow: +85% deviation exceeds 20% tolerance
     dropFactor: 20,
-    dropRate: 62,
+    dropRate: 33,
+    dropCount: 0,
     initialVolume: 500,
-    remainingVolume: 280,
-    infusedVolume: 220,
-    timeToEmptyMinutes: 91,
-    status: 'WARNING',
+    remainingVolume: 500,
+    infusedVolume: 0,
+    timeToEmptyMinutes: 300,
+    status: 'NORMAL',
     isActive: true,
     isPaused: false,
     noDropDurationSec: 0,
-    abnormalFlowDurationSec: 16, // Exceeds 15s deviation threshold
-    activeScenarioId: 'HIGH_FLOW',
-    faultCondition: 'HIGH_FLOW',
+    abnormalFlowDurationSec: 0, // Exceeds 15s deviation threshold
+    activeScenarioId: 'NORMAL',
+    faultCondition: 'NORMAL',
   },
   {
     id: 'bed-05',
@@ -279,20 +283,21 @@ const INITIAL_BEDS: BedData[] = [
       osmolarity: '294 mOsm/L',
     },
     prescribedRate: 100,
-    actualRate: 55, // Low flow: -45% deviation exceeds 20% tolerance
+    actualRate: 100, // Low flow: -45% deviation exceeds 20% tolerance
     dropFactor: 20,
-    dropRate: 18,
+    dropRate: 33,
+    dropCount: 0,
     initialVolume: 500,
-    remainingVolume: 390,
-    infusedVolume: 110,
-    timeToEmptyMinutes: 425,
-    status: 'WARNING',
+    remainingVolume: 500,
+    infusedVolume: 0,
+    timeToEmptyMinutes: 300,
+    status: 'NORMAL',
     isActive: true,
     isPaused: false,
     noDropDurationSec: 0,
-    abnormalFlowDurationSec: 16, // Exceeds 15s deviation threshold
-    activeScenarioId: 'LOW_FLOW',
-    faultCondition: 'LOW_FLOW',
+    abnormalFlowDurationSec: 0, // Exceeds 15s deviation threshold
+    activeScenarioId: 'NORMAL',
+    faultCondition: 'NORMAL',
   },
   {
     id: 'bed-06',
@@ -316,252 +321,25 @@ const INITIAL_BEDS: BedData[] = [
       osmolarity: '154 mOsm/L',
     },
     prescribedRate: 100,
-    actualRate: 0, // Depleted bottle: 0 flow & 0 drops
+    actualRate: 100, // Depleted bottle: 0 flow & 0 drops
     dropFactor: 20,
-    dropRate: 0,
+    dropRate: 33,
+    dropCount: 0,
     initialVolume: 500,
-    remainingVolume: 0, // 0 mL remaining
-    infusedVolume: 500,
-    timeToEmptyMinutes: 0,
-    status: 'CRITICAL',
+    remainingVolume: 500,
+    infusedVolume: 0,
+    timeToEmptyMinutes: 300,
+    status: 'NORMAL',
     isActive: true,
     isPaused: false,
-    noDropDurationSec: 28,
+    noDropDurationSec: 0,
     abnormalFlowDurationSec: 0,
-    activeScenarioId: 'EMPTY_BOTTLE',
-    faultCondition: 'EMPTY_BOTTLE',
+    activeScenarioId: 'NORMAL',
+    faultCondition: 'NORMAL',
   },
 ];
 
 // Demonstration seed records corresponding to multi-bed ward simulation
-const SEED_ALERTS: AlertItem[] = [
-  {
-    id: 'ALT-B03-BLOCKED',
-    bedId: 'bed-03',
-    bedNumber: 'Bed 03',
-    patientName: 'Daniel Thomas',
-    patientMrn: 'MRN-30911',
-    type: 'BLOCKED_LINE',
-    severity: 'CRITICAL',
-    title: 'Blocked or Kinked IV Line',
-    description: 'No drops registered for >20 seconds (0 mL/h delivery). Mechanical line occlusion or roller clamp closed.',
-    triggeredAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-    timestampMs: Date.now() - 3 * 60 * 1000,
-    workflowStatus: 'ACTIVE_UNACKNOWLEDGED',
-    isAcknowledged: false,
-    acknowledgedSecondsElapsed: 0,
-    isOverdue: false,
-    isResolved: false,
-    escalationStage: 'CALLING_DUTY_NURSE',
-    escalationSeconds: 8,
-    communicationChannelUsed: 'WHATSAPP_VOICE',
-    timeline: [
-      { time: '10:48:00 AM', action: 'Critical occlusion detected: 0 drops/min registered by drip chamber sensor' },
-      { time: '10:48:04 AM', action: 'Bedside audible buzzer and optical alarm triggered' },
-      { time: '10:48:04 AM', action: 'Escalation Stage 1: Dispatched priority voice notification to Duty Nurse' },
-    ],
-  },
-  {
-    id: 'ALT-B06-EMPTY',
-    bedId: 'bed-06',
-    bedNumber: 'Bed 06',
-    patientName: 'Olivia Martin',
-    patientMrn: 'MRN-60824',
-    type: 'EMPTY_BOTTLE',
-    severity: 'CRITICAL',
-    title: 'Empty Infusion Bottle',
-    description: 'Fluid reservoir depleted (0 mL remaining). Delivery stopped automatically to prevent air embolism.',
-    triggeredAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    timestampMs: Date.now() - 5 * 60 * 1000,
-    workflowStatus: 'ACTIVE_UNACKNOWLEDGED',
-    isAcknowledged: false,
-    acknowledgedSecondsElapsed: 0,
-    isOverdue: false,
-    isResolved: false,
-    escalationStage: 'CALLING_DUTY_NURSE',
-    escalationSeconds: 10,
-    communicationChannelUsed: 'WHATSAPP_VOICE',
-    timeline: [
-      { time: '10:45:00 AM', action: 'Empty bottle condition detected: 0 mL remaining fluid volume' },
-      { time: '10:45:04 AM', action: 'Bedside safety alarm sounded; nurse escalation active' },
-    ],
-  },
-  {
-    id: 'ALT-B02-LOWFLUID',
-    bedId: 'bed-02',
-    bedNumber: 'Bed 02',
-    patientName: 'Sarah Wilson',
-    patientMrn: 'MRN-20419',
-    type: 'LOW_FLUID',
-    severity: 'WARNING',
-    title: 'Low Fluid Level Warning',
-    description: 'Estimated time to empty is 12 minutes (20 mL left). Prepare replacement fluid bottle.',
-    triggeredAt: new Date(Date.now() - 9 * 60 * 1000).toISOString(),
-    timestampMs: Date.now() - 9 * 60 * 1000,
-    workflowStatus: 'ACKNOWLEDGED_PENDING',
-    isAcknowledged: true,
-    acknowledgedAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-    acknowledgedBy: 'Nurse Sarah Chen, RN',
-    acknowledgedSecondsElapsed: 30,
-    isOverdue: false,
-    isResolved: false,
-    escalationStage: 'ACKNOWLEDGED',
-    escalationSeconds: 4,
-    communicationChannelUsed: 'WHATSAPP_VOICE',
-    timeline: [
-      { time: '10:41:00 AM', action: 'Low fluid warning triggered at 12m threshold (20 mL remaining)' },
-      { time: '10:41:04 AM', action: 'Escalation Stage 1: Initiated simulated call to Nurse Sarah Chen, RN' },
-      { time: '10:41:05 AM', action: 'Acknowledged by Nurse Sarah Chen, RN. Status: Acknowledged – Intervention Pending.' },
-    ],
-  },
-  {
-    id: 'ALT-B04-HIGHFLOW',
-    bedId: 'bed-04',
-    bedNumber: 'Bed 04',
-    patientName: 'Emma Davis',
-    patientMrn: 'MRN-40182',
-    type: 'HIGH_FLOW',
-    severity: 'WARNING',
-    title: 'High Flow Rate Detected',
-    description: 'Actual rate 185 mL/h exceeds prescribed 100 mL/h (+85% deviation) for >15s.',
-    triggeredAt: new Date(Date.now() - 14 * 60 * 1000).toISOString(),
-    timestampMs: Date.now() - 14 * 60 * 1000,
-    workflowStatus: 'INTERVENTION_IN_PROGRESS',
-    isAcknowledged: true,
-    acknowledgedAt: new Date(Date.now() - 13 * 60 * 1000).toISOString(),
-    acknowledgedBy: 'Nurse Sarah Chen, RN',
-    acknowledgedSecondsElapsed: 45,
-    isOverdue: false,
-    isResolved: false,
-    intervention: {
-      interventionType: 'Recalibrate roller clamp to prescribed 100 mL/h',
-      notes: 'Bedside roller clamp inspection and rate recalibration in progress.',
-      startedAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-      nurseName: 'Nurse Sarah Chen, RN',
-    },
-    escalationStage: 'ACKNOWLEDGED',
-    escalationSeconds: 4,
-    communicationChannelUsed: 'WHATSAPP_VOICE',
-    timeline: [
-      { time: '10:36:00 AM', action: 'High flow rate alert generated: 185 mL/h (+85% deviation)' },
-      { time: '10:36:04 AM', action: 'Acknowledged by Nurse Sarah Chen, RN. Status: Acknowledged – Intervention Pending.' },
-      { time: '10:38:00 AM', action: 'Nurse Sarah Chen, RN commenced clinical intervention at bedside.' },
-    ],
-  },
-  {
-    id: 'ALT-B05-LOWFLOW',
-    bedId: 'bed-05',
-    bedNumber: 'Bed 05',
-    patientName: 'Noah Wilson',
-    patientMrn: 'MRN-50731',
-    type: 'LOW_FLOW',
-    severity: 'WARNING',
-    title: 'Low Flow Rate Detected',
-    description: 'Actual rate 55 mL/h below prescribed 100 mL/h (-45% deviation) for >15s.',
-    triggeredAt: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-    timestampMs: Date.now() - 18 * 60 * 1000,
-    workflowStatus: 'ACTIVE_UNACKNOWLEDGED',
-    isAcknowledged: false,
-    acknowledgedSecondsElapsed: 0,
-    isOverdue: false,
-    isResolved: false,
-    escalationStage: 'CALLING_DUTY_NURSE',
-    escalationSeconds: 6,
-    communicationChannelUsed: 'WHATSAPP_VOICE',
-    timeline: [
-      { time: '10:32:00 AM', action: 'Low flow rate alert generated: 55 mL/h (-45% deviation)' },
-      { time: '10:32:04 AM', action: 'Escalation Stage 1: Initiated call to Duty Nurse' },
-    ],
-  },
-  {
-    id: 'ALT-B01-PREV',
-    bedId: 'bed-01',
-    bedNumber: 'Bed 01',
-    patientName: 'Alex Morgan',
-    patientMrn: 'MRN-10142',
-    type: 'LOW_FLUID',
-    severity: 'WARNING',
-    title: 'Low Fluid Level Warning',
-    description: 'Scheduled bag replacement completed and verified safe.',
-    triggeredAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-    timestampMs: Date.now() - 40 * 60 * 1000,
-    workflowStatus: 'RESOLVED_VERIFIED',
-    isAcknowledged: true,
-    acknowledgedAt: new Date(Date.now() - 39 * 60 * 1000).toISOString(),
-    acknowledgedBy: 'Nurse Sarah Chen, RN',
-    acknowledgedSecondsElapsed: 240,
-    isOverdue: false,
-    isResolved: true,
-    resolvedAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-    resolvedBy: 'Nurse Sarah Chen, RN',
-    verifiedAt: new Date(Date.now() - 35 * 60 * 1000).toISOString(),
-    verifiedBy: 'Nurse Sarah Chen, RN',
-    escalationStage: 'RESOLVED',
-    escalationSeconds: 5,
-    communicationChannelUsed: 'WHATSAPP_VOICE',
-    timeline: [
-      { time: '10:10:00 AM', action: 'Low fluid warning triggered at 15m threshold' },
-      { time: '10:10:05 AM', action: 'Acknowledged by Nurse Sarah Chen, RN' },
-      { time: '10:14:00 AM', action: 'Replacement bottle hung' },
-      { time: '10:15:00 AM', action: 'Verification Passed: Remaining volume (420 mL) confirmed safe. Alert resolved.' },
-    ],
-  },
-];
-
-const SEED_EVENTS: EventLogEntry[] = [
-  {
-    id: 'evt-seed-1',
-    timestamp: new Date(Date.now() - 50 * 60 * 1000).toLocaleTimeString(),
-    timestampMs: Date.now() - 50 * 60 * 1000,
-    bedNumber: 'System',
-    eventType: 'INFUSION_STARTED',
-    severity: 'SUCCESS',
-    message: 'Ward 4B multi-bed infusion monitoring network initialized.',
-    details: '6 active IV stations online. Real-time telemetry optical sensor streaming active.',
-  },
-  {
-    id: 'evt-seed-2',
-    timestamp: new Date(Date.now() - 42 * 60 * 1000).toLocaleTimeString(),
-    timestampMs: Date.now() - 42 * 60 * 1000,
-    bedNumber: 'Bed 04',
-    eventType: 'LOW_FLUID_WARNING',
-    severity: 'WARNING',
-    message: 'Low Fluid Level Warning: 14 min remaining in bag',
-    details: 'Volume depleted to 18 mL at 60 mL/h delivery rate.',
-    alertId: 'ALT-109401',
-  },
-  {
-    id: 'evt-seed-3',
-    timestamp: new Date(Date.now() - 41 * 60 * 1000).toLocaleTimeString(),
-    timestampMs: Date.now() - 41 * 60 * 1000,
-    bedNumber: 'Bed 04',
-    eventType: 'ALERT_ACKNOWLEDGED',
-    severity: 'INFO',
-    message: 'Alert ALT-109401 acknowledged by Nurse Sarah Chen, RN. Intervention pending.',
-    alertId: 'ALT-109401',
-  },
-  {
-    id: 'evt-seed-3b',
-    timestamp: new Date(Date.now() - 36 * 60 * 1000).toLocaleTimeString(),
-    timestampMs: Date.now() - 36 * 60 * 1000,
-    bedNumber: 'Bed 04',
-    eventType: 'INTERVENTION_RECORDED',
-    severity: 'SUCCESS',
-    message: 'Bedside intervention recorded: Replaced IV fluid container with 1000 mL bag.',
-    alertId: 'ALT-109401',
-  },
-  {
-    id: 'evt-seed-4',
-    timestamp: new Date(Date.now() - 35 * 60 * 1000).toLocaleTimeString(),
-    timestampMs: Date.now() - 35 * 60 * 1000,
-    bedNumber: 'Bed 04',
-    eventType: 'VERIFICATION_PASSED',
-    severity: 'SUCCESS',
-    message: 'Verification passed: Remaining fluid volume confirmed safe. Alert resolved.',
-    alertId: 'ALT-109401',
-  },
-];
-
 export interface SimulationContextType {
   beds: BedData[];
   selectedBedId: string;
@@ -625,6 +403,11 @@ export interface SimulationContextType {
   saveDemoPreset: (preset: DemoPreset) => void;
   deleteDemoPreset: (id: string) => void;
   resetDemoPresets: () => void;
+
+  // Ward-level Demonstration Mode
+  loadDemoConfiguration: () => void;
+  restoreNormalWard: () => void;
+  applyWardPreset: (preset: 'ALL_NORMAL' | 'MIXED_WARD' | 'CRITICAL_EMERGENCY') => void;
 
   // Separated Alert Actions
   acknowledgeAlert: (alertId: string, responderName?: string) => void;
@@ -900,7 +683,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [beds, setBeds] = useState<BedData[]>(() => {
     try {
-      const saved = localStorage.getItem('dripconnect_beds_ward_v5');
+      const saved = localStorage.getItem('dripconnect_beds_ward_v6');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length === 6 && parsed[0]?.patient?.name === 'Alex Morgan') {
@@ -919,7 +702,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Load alerts from localStorage with realistic initial seed
   const [alerts, setAlerts] = useState<AlertItem[]>(() => {
     try {
-      const saved = localStorage.getItem('dripconnect_alerts_ward_v5');
+      const saved = localStorage.getItem('dripconnect_alerts_ward_v6');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0 && parsed.some(a => a.patientName === 'Daniel Thomas' || a.patientName === 'Sarah Wilson')) {
@@ -929,7 +712,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch {
       // fallback
     }
-    return SEED_ALERTS;
+    return [];
   });
 
   const [buzzerActive, setBuzzerActive] = useState<boolean>(false);
@@ -940,7 +723,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Load event history from localStorage with realistic initial seed
   const [eventHistory, setEventHistory] = useState<EventLogEntry[]>(() => {
     try {
-      const saved = localStorage.getItem('dripconnect_events');
+      const saved = localStorage.getItem('dripconnect_events_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -948,7 +731,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch {
       // fallback
     }
-    return SEED_EVENTS;
+    return [];
   });
 
   // Telemetry buffer for charts for each bed
@@ -1076,7 +859,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Save event history when changed
   useEffect(() => {
     try {
-      localStorage.setItem('dripconnect_events', JSON.stringify(eventHistory.slice(0, 150)));
+      localStorage.setItem('dripconnect_events_v2', JSON.stringify(eventHistory.slice(0, 150)));
     } catch {
       // ignore
     }
@@ -1085,7 +868,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Save beds when changed
   useEffect(() => {
     try {
-      localStorage.setItem('dripconnect_beds_ward_v5', JSON.stringify(beds));
+      localStorage.setItem('dripconnect_beds_ward_v6', JSON.stringify(beds));
     } catch {
       // ignore
     }
@@ -1094,7 +877,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Save alerts when changed
   useEffect(() => {
     try {
-      localStorage.setItem('dripconnect_alerts_ward_v5', JSON.stringify(alerts.slice(0, 50)));
+      localStorage.setItem('dripconnect_alerts_ward_v6', JSON.stringify(alerts.slice(0, 50)));
     } catch {
       // ignore
     }
@@ -1645,9 +1428,11 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
           const updatedBed: BedData = {
             ...bed,
+            actualRate: newRemainingVolume === 0 ? 0 : newActualRate,
             remainingVolume: Math.round(newRemainingVolume * 10) / 10,
             infusedVolume: Math.round(newInfusedVolume * 10) / 10,
             dropRate: dropsPerMin,
+            dropCount: (bed.dropCount || 0) + (dropsPerMin * dt) / 60,
             timeToEmptyMinutes: timeToEmpty,
             noDropDurationSec: newNoDropSec,
             abnormalFlowDurationSec: newAbnormalFlowSec,
@@ -1776,7 +1561,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
           if (condition === 'NORMAL') {
             actualRate = b.prescribedRate;
-            remainingVolume = remainingVolume < 60 ? 420 : remainingVolume;
+            remainingVolume = remainingVolume < 60 ? b.initialVolume : remainingVolume;
             noDropDurationSec = 0;
             abnormalFlowDurationSec = 0;
             status = 'NORMAL';
@@ -1796,23 +1581,29 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             timeToEmptyMinutes = 0;
             status = 'CRITICAL';
           } else if (condition === 'BLOCKED_LINE') {
+            // Flow stops now; the no-drop timer accumulates in the physics loop
+            // and the critical alert fires only after the configured duration
+            // (default 20 simulated seconds) — not instantly.
             actualRate = 0;
-            noDropDurationSec = 22;
+            noDropDurationSec = 0;
             abnormalFlowDurationSec = 0;
             timeToEmptyMinutes = null;
-            status = 'CRITICAL';
+            status = 'NORMAL';
           } else if (condition === 'HIGH_FLOW') {
-            actualRate = 185;
-            abnormalFlowDurationSec = 16;
+            // 1.85x prescribed; the abnormal-flow timer accumulates in the loop
+            // and the warning fires after the configured duration (default 15 s).
+            actualRate = Math.round(b.prescribedRate * 1.85);
+            abnormalFlowDurationSec = 0;
             noDropDurationSec = 0;
-            status = 'WARNING';
-            timeToEmptyMinutes = Math.round((remainingVolume / 185) * 60);
+            status = 'NORMAL';
+            timeToEmptyMinutes = Math.round((remainingVolume / actualRate) * 60);
           } else if (condition === 'LOW_FLOW') {
-            actualRate = 55;
-            abnormalFlowDurationSec = 16;
+            // 0.55x prescribed; same engine-timed warning path as high flow.
+            actualRate = Math.round(b.prescribedRate * 0.55);
+            abnormalFlowDurationSec = 0;
             noDropDurationSec = 0;
-            status = 'WARNING';
-            timeToEmptyMinutes = Math.round((remainingVolume / 55) * 60);
+            status = 'NORMAL';
+            timeToEmptyMinutes = Math.round((remainingVolume / actualRate) * 60);
           }
 
           const dropRate =
@@ -1842,7 +1633,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const patientLabel = targetBed?.patient.name || '';
 
       addEvent(
-        'FAULT_SIMULATION_UPDATED' as any,
+        'FAULT_CONDITION_APPLIED',
         condition === 'NORMAL'
           ? 'SUCCESS'
           : condition === 'EMPTY_BOTTLE' || condition === 'BLOCKED_LINE'
@@ -1862,6 +1653,92 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setBedFaultCondition(bedId, scenario as BedFaultCondition);
     },
     [setBedFaultCondition]
+  );
+
+  // Ward-level Demonstration Mode actions
+  const loadDemoConfiguration = useCallback(() => {
+    const demoMap: Record<string, BedFaultCondition> = {
+      'bed-01': 'NORMAL',
+      'bed-02': 'LOW_FLUID',
+      'bed-03': 'BLOCKED_LINE',
+      'bed-04': 'HIGH_FLOW',
+      'bed-05': 'LOW_FLOW',
+      'bed-06': 'EMPTY_BOTTLE',
+    };
+    Object.entries(demoMap).forEach(([bedId, condition]) => setBedFaultCondition(bedId, condition));
+    addEvent(
+      'DEMO_CONFIGURATION_LOADED',
+      'INFO',
+      'Ward',
+      'Demonstration Mode: Load Demo Configuration applied — Bed 01 Normal, Bed 02 Low Fluid, Bed 03 Blocked Line, Bed 04 High Flow, Bed 05 Low Flow, Bed 06 Empty Bottle.'
+    );
+  }, [setBedFaultCondition, addEvent]);
+
+  const restoreNormalWard = useCallback(() => {
+    const rate = settingsRef.current.defaultPrescribedRate || 100;
+    const volume = settingsRef.current.defaultInitialVolume || 500;
+    setBeds(prev =>
+      prev.map(b => ({
+        ...b,
+        prescribedRate: rate,
+        actualRate: rate,
+        dropRate: Math.round((rate * b.dropFactor) / 60),
+        dropCount: 0,
+        initialVolume: volume,
+        remainingVolume: volume,
+        infusedVolume: 0,
+        timeToEmptyMinutes: rate > 0 ? Math.round((volume / rate) * 60) : null,
+        status: 'NORMAL' as BedData['status'],
+        isActive: true,
+        isPaused: false,
+        noDropDurationSec: 0,
+        abnormalFlowDurationSec: 0,
+        activeScenarioId: 'NORMAL',
+        faultCondition: 'NORMAL' as BedFaultCondition,
+      }))
+    );
+    // Stop escalation side-effects; historical records and open alerts are
+    // preserved (open alerts can now pass verification against normal beds).
+    setActiveCall(null);
+    setBuzzerActive(false);
+    audioService.stopBedsideBuzzer();
+    addEvent(
+      'WARD_RESTORED',
+      'SUCCESS',
+      'Ward',
+      `Restore Normal Ward: all beds returned to normal baseline (${volume} mL, ${rate} mL/h, drops active). Escalation stopped. Historical event records preserved.`
+    );
+  }, [addEvent]);
+
+  const applyWardPreset = useCallback(
+    (preset: 'ALL_NORMAL' | 'MIXED_WARD' | 'CRITICAL_EMERGENCY') => {
+      if (preset === 'ALL_NORMAL') {
+        restoreNormalWard();
+        return;
+      }
+      if (preset === 'MIXED_WARD') {
+        loadDemoConfiguration();
+        return;
+      }
+      const criticalMap: Record<string, BedFaultCondition> = {
+        'bed-01': 'BLOCKED_LINE',
+        'bed-02': 'EMPTY_BOTTLE',
+        'bed-03': 'NORMAL',
+        'bed-04': 'HIGH_FLOW',
+        'bed-05': 'BLOCKED_LINE',
+        'bed-06': 'EMPTY_BOTTLE',
+      };
+      Object.entries(criticalMap).forEach(([bedId, condition]) =>
+        setBedFaultCondition(bedId, condition)
+      );
+      addEvent(
+        'DEMO_CONFIGURATION_LOADED',
+        'WARNING',
+        'Ward',
+        'Demonstration Mode: Critical Emergency preset applied — blocked lines on Beds 01 and 05, empty bottles on Beds 02 and 06, high flow on Bed 04.'
+      );
+    },
+    [restoreNormalWard, loadDemoConfiguration, setBedFaultCondition, addEvent]
   );
 
   // Bed-level Controls
@@ -1924,16 +1801,19 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setBeds(prev =>
         prev.map(b => {
           if (b.id === bedId) {
-            const dropRate = Math.round((b.prescribedRate * b.dropFactor) / 60);
+            const baseRate = settingsRef.current.defaultPrescribedRate || 100;
+            const baseVolume = settingsRef.current.defaultInitialVolume || 500;
+            const dropRate = Math.round((baseRate * b.dropFactor) / 60);
             return {
               ...b,
-              prescribedRate: 100,
-              actualRate: 100,
-              initialVolume: 500,
-              remainingVolume: 420,
-              infusedVolume: 80,
+              prescribedRate: baseRate,
+              actualRate: baseRate,
+              initialVolume: baseVolume,
+              remainingVolume: baseVolume,
+              infusedVolume: 0,
               dropRate,
-              timeToEmptyMinutes: 252,
+              dropCount: 0,
+              timeToEmptyMinutes: baseRate > 0 ? Math.round((baseVolume / baseRate) * 60) : null,
               status: 'NORMAL',
               isActive: true,
               isPaused: false,
@@ -1951,7 +1831,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const bedNum = target?.bedNumber || bedId;
 
       addEvent(
-        'SIMULATION_RESET',
+        'BED_RESET',
         'INFO',
         bedNum,
         `Unit ${bedNum} parameters reset to normal baseline. Other ward beds unchanged.`
@@ -2406,10 +2286,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const clearEventHistory = useCallback((purgeAll = false) => {
     setEventHistory([]);
     try {
-      localStorage.removeItem('dripconnect_events');
+      localStorage.removeItem('dripconnect_events_v2');
       if (purgeAll) {
         setAlerts([]);
-        localStorage.removeItem('dripconnect_alerts_ward_v5');
+        localStorage.removeItem('dripconnect_alerts_ward_v6');
         setBedTelemetryHistory({});
       }
     } catch {
@@ -2859,6 +2739,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         saveDemoPreset,
         deleteDemoPreset,
         resetDemoPresets,
+        loadDemoConfiguration,
+        restoreNormalWard,
+        applyWardPreset,
         acknowledgeAlert,
         beginIntervention,
         recordIntervention,

@@ -48,6 +48,7 @@ export interface BedData {
   actualRate: number; // mL/h
   dropFactor: number; // drops per mL (e.g. 20 gtt/mL)
   dropRate: number; // drops per minute
+  dropCount: number; // cumulative drops counted since infusion start / bed reset
   initialVolume: number; // mL
   remainingVolume: number; // mL
   infusedVolume: number; // mL
@@ -181,6 +182,10 @@ export interface EventLogEntry {
     | 'INTERVENTION_OVERDUE'
     | 'ALERT_RESOLVED'
     | 'SIMULATION_RESET'
+    | 'FAULT_CONDITION_APPLIED'
+    | 'BED_RESET'
+    | 'DEMO_CONFIGURATION_LOADED'
+    | 'WARD_RESTORED'
     | 'SCENARIO_TRIGGERED'
     | 'DEMO_SCENARIO_STEP'
     | 'SHIFT_CHANGED'

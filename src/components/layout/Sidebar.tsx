@@ -9,6 +9,7 @@ import {
   PhoneCall,
   Users,
   LineChart,
+  History,
   Settings,
 } from 'lucide-react';
 
@@ -69,8 +70,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'analytics',
-      label: 'Event History',
+      label: 'Analytics',
       icon: LineChart,
+      badge: null,
+    },
+    {
+      id: 'event-history',
+      label: 'Event History',
+      icon: History,
       badge: null,
     },
     {

@@ -16,6 +16,7 @@ import { AlertsPage } from './pages/AlertsPage';
 import { EscalationPage } from './pages/EscalationPage';
 import { PatientsPage } from './pages/PatientsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { EventHistoryPage } from './pages/EventHistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { Menu } from 'lucide-react';
 
@@ -97,6 +98,7 @@ export default function App() {
             {currentPage === 'escalation' && <EscalationPage onNavigate={setCurrentPage} />}
             {currentPage === 'patients' && <PatientsPage onNavigate={setCurrentPage} />}
             {currentPage === 'analytics' && <AnalyticsPage onNavigate={setCurrentPage} />}
+            {currentPage === 'event-history' && <EventHistoryPage onNavigate={setCurrentPage} />}
             {currentPage === 'settings' && <SettingsPage onNavigate={setCurrentPage} />}
           </main>
         </div>

@@ -11,7 +11,10 @@ export const DisclaimerBanner: React.FC = () => {
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
         <p className="leading-tight">
-          <span className="font-semibold">Educational &amp; Demonstration Prototype:</span> DripConnect is a software prototype. All patient details, infusion parameters, sensor readings and notification workflows are simulated. This system is not a certified medical device and must not be used to make clinical decisions or monitor actual patients.
+          <span className="font-semibold">DripConnect is an educational and demonstration software prototype.</span>{' '}
+          All patient information, infusion parameters, sensor readings and notification workflows are simulated.
+          This system is not a certified medical device and must not be used for clinical decisions or actual
+          patient monitoring.
         </p>
       </div>
       <button

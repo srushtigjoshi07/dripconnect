@@ -35,6 +35,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
   const [severityFilter, setSeverityFilter] = useState<'ALL' | AlertSeverity>('ALL');
   const [workflowFilter, setWorkflowFilter] = useState<'ALL' | AlertWorkflowStatus>('ALL');
   const [bedFilter, setBedFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [dateFilter, setDateFilter] = useState<string>('');
   const [selectedAlertForIntervention, setSelectedAlertForIntervention] = useState<AlertItem | null>(null);
 
   // Filtered alerts
@@ -42,6 +44,11 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
     if (severityFilter !== 'ALL' && alert.severity !== severityFilter) return false;
     if (bedFilter !== 'ALL' && alert.bedNumber !== bedFilter) return false;
     if (workflowFilter !== 'ALL' && alert.workflowStatus !== workflowFilter) return false;
+    if (typeFilter !== 'ALL' && alert.type !== typeFilter) return false;
+    if (dateFilter) {
+      const alertDate = new Date(alert.timestampMs).toISOString().slice(0, 10);
+      if (alertDate !== dateFilter) return false;
+    }
     return true;
   });
 
@@ -265,6 +272,38 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({ onNavigate }) => {
             <option value="Bed 04">Bed 04</option>
             <option value="Bed 05">Bed 05</option>
           </select>
+
+          {/* Alert type filter */}
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-700 focus:outline-none"
+          >
+            <option value="ALL">All Types</option>
+            <option value="LOW_FLUID">Low Fluid</option>
+            <option value="EMPTY_BOTTLE">Empty Bottle</option>
+            <option value="BLOCKED_LINE">Blocked Line</option>
+            <option value="HIGH_FLOW">High Flow</option>
+            <option value="LOW_FLOW">Low Flow</option>
+            <option value="SENSOR_DISCONNECT">Sensor Disconnect</option>
+          </select>
+
+          {/* Date filter */}
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-700 focus:outline-none"
+            title="Filter alerts by date"
+          />
+          {dateFilter && (
+            <button
+              onClick={() => setDateFilter('')}
+              className="text-[11px] text-slate-500 hover:text-slate-800 underline"
+            >
+              Clear date
+            </button>
+          )}
         </div>
 
         <div className="text-slate-400 font-mono text-[11px]">
