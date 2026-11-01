@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSimulation } from '../../context/SimulationContext';
+import { SIMULATION_SCENARIOS } from '../../services/scenarios';
+import { DemoPreset, DemoPresetStep } from '../../types';
 import {
   Play,
   Pause,
@@ -7,23 +9,30 @@ import {
   Square,
   Sparkles,
   StopCircle,
-  Activity,
-  Layers,
   FastForward,
   Clock,
-  Info,
+  Settings2,
+  Plus,
+  Trash2,
+  Save,
+  X,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface SimulationControlPanelProps {
   compact?: boolean;
 }
 
+const ALERT_TYPE_OPTIONS = ['LOW_FLUID', 'EMPTY_BOTTLE', 'BLOCKED_LINE', 'HIGH_FLOW', 'LOW_FLOW', 'SENSOR_DISCONNECT'];
+const ACTION_OPTIONS = ['NONE', 'RAISE_ALERT', 'CALL_STAGE', 'ACKNOWLEDGE', 'INTERVENE_VERIFY'];
+const INTERVENTION_ACTIONS = ['CLEAR_KINK', 'REPLACE_BAG_500', 'REPLACE_BAG_1000', 'RECALIBRATE_RATE'];
+
 export const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({ compact = false }) => {
   const {
     isSimulationRunning,
     startSimulationEngine,
     pauseSimulationEngine,
-    resumeSimulationEngine,
     stopSimulationEngine,
     resetSimulationEngine,
     runDemoScenario,
@@ -33,7 +42,89 @@ export const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({ 
     updateSettings,
     activeShift,
     selectedBed,
+    beds,
+    demoPresets,
+    activeDemoPresetId,
+    activeDemoPreset,
+    setActiveDemoPresetId,
+    saveDemoPreset,
+    deleteDemoPreset,
+    resetDemoPresets,
   } = useSimulation();
+
+  const [editorOpen, setEditorOpen] = useState<boolean>(false);
+  const [draft, setDraft] = useState<DemoPreset | null>(null);
+
+  useEffect(() => {
+    if (editorOpen) {
+      setDraft(JSON.parse(JSON.stringify(activeDemoPreset)) as DemoPreset);
+    } else {
+      setDraft(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorOpen, activeDemoPresetId]);
+
+  const updateStep = (index: number, patch: Partial<DemoPresetStep>) => {
+    setDraft(prev => {
+      if (!prev) return prev;
+      const steps = prev.steps.map((s, i) => (i === index ? { ...s, ...patch } : s));
+      return { ...prev, steps };
+    });
+  };
+
+  const addStep = () => {
+    setDraft(prev => {
+      if (!prev) return prev;
+      const step: DemoPresetStep = {
+        id: `step-${Date.now()}`,
+        name: 'New Step',
+        description: '',
+        durationSec: 3,
+        action: 'NONE',
+      };
+      return { ...prev, steps: [...prev.steps, step] };
+    });
+  };
+
+  const removeStep = (index: number) => {
+    setDraft(prev => (prev ? { ...prev, steps: prev.steps.filter((_, i) => i !== index) } : prev));
+  };
+
+  const moveStep = (index: number, dir: -1 | 1) => {
+    setDraft(prev => {
+      if (!prev) return prev;
+      const steps = [...prev.steps];
+      const target = index + dir;
+      if (target < 0 || target >= steps.length) return prev;
+      [steps[index], steps[target]] = [steps[target], steps[index]];
+      return { ...prev, steps };
+    });
+  };
+
+  const createNewPreset = () => {
+    const preset: DemoPreset = {
+      id: `preset-${Date.now()}`,
+      name: 'Custom Demonstration',
+      description: 'Evaluator-defined demonstration preset.',
+      targetBedId: beds[0]?.id || 'bed-01',
+      steps: [
+        {
+          id: `step-${Date.now()}`,
+          name: 'Start Normal Infusion',
+          description: 'Baseline infusion on the target bed.',
+          durationSec: 3,
+          scenario: 'NORMAL',
+          action: 'NONE',
+        },
+      ],
+    };
+    saveDemoPreset(preset);
+    setDraft(JSON.parse(JSON.stringify(preset)) as DemoPreset);
+  };
+
+  const inputCls =
+    'px-1.5 py-1 rounded border border-slate-200 text-[11px] text-slate-700 bg-white focus:outline-none focus:border-teal-400 w-full';
+  const labelCls = 'block text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5';
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-3.5 space-y-3">
@@ -135,8 +226,31 @@ export const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({ 
           </button>
         </div>
 
-        {/* 12-Step Guided Demo Scenario Button */}
-        <div>
+        {/* Demonstration Preset Controls */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <select
+            value={activeDemoPresetId}
+            onChange={e => setActiveDemoPresetId(e.target.value)}
+            disabled={demoScenario.isActive}
+            className="px-2 py-1.5 rounded-md border border-slate-200 text-xs text-slate-700 bg-white focus:outline-none focus:border-teal-400 max-w-[220px]"
+            title="Select a demonstration preset"
+          >
+            {demoPresets.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.steps.length} steps)
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => setEditorOpen(v => !v)}
+            className="px-2.5 py-1.5 rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium flex items-center gap-1.5 transition-colors"
+            title="Configure demonstration presets"
+          >
+            {editorOpen ? <X className="w-3.5 h-3.5" /> : <Settings2 className="w-3.5 h-3.5 text-slate-500" />}
+            <span>{editorOpen ? 'Close' : 'Configure'}</span>
+          </button>
+
           {demoScenario.isActive ? (
             <button
               onClick={stopDemoScenario}
@@ -144,20 +258,282 @@ export const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({ 
               title="Stop guided demo scenario"
             >
               <StopCircle className="w-3.5 h-3.5" />
-              <span>Stop Demo Scenario</span>
+              <span>Stop Demo</span>
             </button>
           ) : (
             <button
-              onClick={runDemoScenario}
+              onClick={() => runDemoScenario()}
               className="px-3.5 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-              title="Run 12-step guided demonstration sequence"
+              title={`Run demonstration preset: ${activeDemoPreset.name}`}
             >
               <Sparkles className="w-3.5 h-3.5 text-teal-300" />
-              <span>Run 12-Step Demo Scenario</span>
+              <span>Run Demo Preset</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Demonstration Preset Editor */}
+      {editorOpen && draft && (
+        <div className="border border-slate-200 rounded-lg bg-slate-50 p-3 space-y-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-[180px]">
+              <label className={labelCls}>Preset name</label>
+              <input
+                className={inputCls}
+                value={draft.name}
+                onChange={e => setDraft({ ...draft, name: e.target.value })}
+              />
+            </div>
+            <div className="w-36">
+              <label className={labelCls}>Target bed</label>
+              <select
+                className={inputCls}
+                value={draft.targetBedId}
+                onChange={e => setDraft({ ...draft, targetBedId: e.target.value })}
+              >
+                {beds.map(b => (
+                  <option key={b.id} value={b.id}>
+                    {b.bedNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5 pb-0.5">
+              <button
+                onClick={() => draft && saveDemoPreset(draft)}
+                className="px-2.5 py-1.5 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-semibold flex items-center gap-1"
+              >
+                <Save className="w-3 h-3" /> Save Preset
+              </button>
+              <button
+                onClick={createNewPreset}
+                className="px-2.5 py-1.5 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> New
+              </button>
+              <button
+                onClick={() => draft && deleteDemoPreset(draft.id)}
+                disabled={demoPresets.length <= 1}
+                className="px-2.5 py-1.5 rounded-md bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-medium flex items-center gap-1 disabled:opacity-40"
+              >
+                <Trash2 className="w-3 h-3" /> Delete
+              </button>
+              <button
+                onClick={resetDemoPresets}
+                className="px-2.5 py-1.5 rounded-md bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-medium"
+              >
+                Reset Defaults
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Preset description</label>
+            <input
+              className={inputCls}
+              value={draft.description}
+              onChange={e => setDraft({ ...draft, description: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            {draft.steps.map((step, i) => (
+              <div key={step.id} className="bg-white border border-slate-200 rounded-md p-2.5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] font-bold text-slate-400">#{i + 1}</span>
+                  <input
+                    className={`${inputCls} font-semibold`}
+                    value={step.name}
+                    onChange={e => updateStep(i, { name: e.target.value })}
+                    placeholder="Step name"
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => moveStep(i, -1)} className="p-1 rounded hover:bg-slate-100 text-slate-500" title="Move step up">
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => moveStep(i, 1)} className="p-1 rounded hover:bg-slate-100 text-slate-500" title="Move step down">
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => removeStep(i)} className="p-1 rounded hover:bg-rose-50 text-rose-500" title="Remove step">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  className={inputCls}
+                  value={step.description}
+                  onChange={e => updateStep(i, { description: e.target.value })}
+                  placeholder="Step description"
+                />
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className={labelCls}>Bed</label>
+                    <select
+                      className={inputCls}
+                      value={step.bedId || ''}
+                      onChange={e => updateStep(i, { bedId: e.target.value || undefined })}
+                    >
+                      <option value="">Preset target</option>
+                      {beds.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.bedNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Scenario</label>
+                    <select
+                      className={inputCls}
+                      value={step.scenario || ''}
+                      onChange={e =>
+                        updateStep(i, { scenario: (e.target.value || undefined) as DemoPresetStep['scenario'] })
+                      }
+                    >
+                      <option value="">None</option>
+                      {Object.values(SIMULATION_SCENARIOS).map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.id.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Action</label>
+                    <select
+                      className={inputCls}
+                      value={step.action || 'NONE'}
+                      onChange={e =>
+                        updateStep(i, { action: e.target.value as DemoPresetStep['action'] })
+                      }
+                    >
+                      {ACTION_OPTIONS.map(a => (
+                        <option key={a} value={a}>
+                          {a.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Duration (sec)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={120}
+                      className={inputCls}
+                      value={step.durationSec}
+                      onChange={e => updateStep(i, { durationSec: Math.max(1, Number(e.target.value) || 1) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className={labelCls}>Set volume (mL)</label>
+                    <input
+                      type="number"
+                      className={inputCls}
+                      value={step.setpoints?.remainingVolume ?? ''}
+                      onChange={e =>
+                        updateStep(i, {
+                          setpoints: {
+                            ...step.setpoints,
+                            remainingVolume: e.target.value === '' ? undefined : Number(e.target.value),
+                          },
+                        })
+                      }
+                      placeholder="—"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Set actual rate</label>
+                    <input
+                      type="number"
+                      className={inputCls}
+                      value={step.setpoints?.actualRate ?? ''}
+                      onChange={e =>
+                        updateStep(i, {
+                          setpoints: {
+                            ...step.setpoints,
+                            actualRate: e.target.value === '' ? undefined : Number(e.target.value),
+                          },
+                        })
+                      }
+                      placeholder="—"
+                    />
+                  </div>
+                  {step.action === 'RAISE_ALERT' && (
+                    <div>
+                      <label className={labelCls}>Alert type</label>
+                      <select
+                        className={inputCls}
+                        value={step.alertType || 'HIGH_FLOW'}
+                        onChange={e =>
+                          updateStep(i, { alertType: e.target.value as DemoPresetStep['alertType'] })
+                        }
+                      >
+                        {ALERT_TYPE_OPTIONS.map(t => (
+                          <option key={t} value={t}>
+                            {t.replace(/_/g, ' ')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {step.action === 'CALL_STAGE' && (
+                    <div>
+                      <label className={labelCls}>Call stage</label>
+                      <select
+                        className={inputCls}
+                        value={step.callStage || 1}
+                        onChange={e =>
+                          updateStep(i, { callStage: Number(e.target.value) as DemoPresetStep['callStage'] })
+                        }
+                      >
+                        <option value={1}>1 · Duty Nurse</option>
+                        <option value={2}>2 · Ward Attendant</option>
+                        <option value={3}>3 · Senior Nurse</option>
+                      </select>
+                    </div>
+                  )}
+                  {step.action === 'INTERVENE_VERIFY' && (
+                    <div>
+                      <label className={labelCls}>Corrective action</label>
+                      <select
+                        className={inputCls}
+                        value={step.interventionActionId || 'CLEAR_KINK'}
+                        onChange={e => updateStep(i, { interventionActionId: e.target.value })}
+                      >
+                        {INTERVENTION_ACTIONS.map(a => (
+                          <option key={a} value={a}>
+                            {a.replace(/_/g, ' ')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <button
+              onClick={addStep}
+              className="px-2.5 py-1.5 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-dashed border-slate-300 text-[11px] font-medium flex items-center gap-1 w-full justify-center"
+            >
+              <Plus className="w-3 h-3" /> Add Step
+            </button>
+          </div>
+
+          <p className="text-[10px] text-slate-400 leading-relaxed">
+            Presets are stored locally in your browser. Steps apply a built-in scenario and/or setpoints to a bed, then
+            optionally raise an alert, place an escalation call, acknowledge the demo alert, or record an intervention
+            and run sensor verification against live telemetry.
+          </p>
+        </div>
+      )}
 
       {/* Demo Scenario Progress Banner when Active */}
       {demoScenario.isActive && (

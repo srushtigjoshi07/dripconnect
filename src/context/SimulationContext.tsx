@@ -15,6 +15,8 @@ import {
   ActiveCallState,
   DemoScenarioState,
   AlertWorkflowStatus,
+  DemoPreset,
+  DemoPresetStep,
 } from '../types';
 import { SIMULATION_SCENARIOS } from '../services/scenarios';
 import { audioService } from '../services/audioService';
@@ -576,6 +578,7 @@ export interface SimulationContextType {
   activeAlerts: AlertItem[];
   eventHistory: EventLogEntry[];
   telemetryHistory: TelemetryPoint[];
+  bedTelemetryHistory: Record<string, TelemetryPoint[]>;
   buzzerActive: boolean;
   activeCall: ActiveCallState | null;
   currentSimulatedTime: Date;
@@ -611,8 +614,17 @@ export interface SimulationContextType {
   resumeSimulationEngine: () => void;
   stopSimulationEngine: () => void;
   resetSimulationEngine: () => void;
-  runDemoScenario: () => void;
+  runDemoScenario: (presetId?: string) => void;
   stopDemoScenario: () => void;
+
+  // Configurable Demonstration Presets
+  demoPresets: DemoPreset[];
+  activeDemoPresetId: string;
+  activeDemoPreset: DemoPreset;
+  setActiveDemoPresetId: (id: string) => void;
+  saveDemoPreset: (preset: DemoPreset) => void;
+  deleteDemoPreset: (id: string) => void;
+  resetDemoPresets: () => void;
 
   // Separated Alert Actions
   acknowledgeAlert: (alertId: string, responderName?: string) => void;
@@ -641,6 +653,215 @@ export interface SimulationContextType {
     prescribedRate?: number
   ) => void;
 }
+
+// ---------------------------------------------------------------------------
+// Default demonstration presets. The first preset reproduces, step for step,
+// the original hardcoded 12-step Bed 06 guided demonstration as data so it
+// can be edited, duplicated or replaced from the Simulation Control Panel.
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_DEMO_PRESETS: DemoPreset[] = [
+  {
+    id: 'preset-standard-demo',
+    name: 'Standard Clinical Demo (Bed 06)',
+    description:
+      'The original 12-step guided demonstration: normal infusion, high-flow warning, blocked line, nurse notification, escalation, acknowledgement, intervention and verified resolution on Bed 06.',
+    targetBedId: 'bed-06',
+    steps: [
+      {
+        id: 'std-1',
+        name: 'Start Normal Infusion',
+        description: 'Bed 06 initialized to nominal 100 mL/h baseline with 0.9% Normal Saline.',
+        durationSec: 3,
+        scenario: 'NORMAL',
+        setpoints: { prescribedRate: 100, actualRate: 100, remainingVolume: 420, initialVolume: 500 },
+        eventType: 'INFUSION_STARTED',
+        eventSeverity: 'SUCCESS',
+      },
+      {
+        id: 'std-2',
+        name: 'Generate Flow-Rate Readings',
+        description: 'Optical drip sensor recording steady nominal drop rate of 33 gtt/min (100.2 mL/h).',
+        durationSec: 3,
+        eventType: 'FLOW_READING_RECORDED',
+        eventSeverity: 'INFO',
+      },
+      {
+        id: 'std-3',
+        name: 'Gradually Decrease Fluid Volume',
+        description: 'Simulating accelerated fluid delivery; reservoir drops to 120 mL to test depletion tracking.',
+        durationSec: 3,
+        setpoints: { remainingVolume: 120, infusedVolume: 380 },
+        eventType: 'FLOW_READING_RECORDED',
+        eventSeverity: 'INFO',
+      },
+      {
+        id: 'std-4',
+        name: 'Simulate High-Flow Condition',
+        description: 'Infusion rate surges to 160 mL/h (+60% above prescribed 100 mL/h), breaching safe tolerance.',
+        durationSec: 3,
+        setpoints: { actualRate: 160, dropRate: 53, abnormalFlowDurationSec: 16 },
+        eventType: 'HIGH_FLOW_DETECTED',
+        eventSeverity: 'WARNING',
+      },
+      {
+        id: 'std-5',
+        name: 'Generate Flow Warning Alert',
+        description: 'Abnormal flow duration threshold (15s) exceeded. System generates amber Warning alert and chime.',
+        durationSec: 3,
+        action: 'RAISE_ALERT',
+        alertType: 'HIGH_FLOW',
+        eventType: 'ALERT_GENERATED',
+        eventSeverity: 'WARNING',
+      },
+      {
+        id: 'std-6',
+        name: 'Simulate Blocked IV Line',
+        description: 'Simulating line occlusion / tube kinking. Optical drop chamber registers 0 drops/min.',
+        durationSec: 3,
+        setpoints: { actualRate: 0, dropRate: 0, noDropDurationSec: 22, status: 'CRITICAL' },
+        eventType: 'BLOCKED_LINE_CRITICAL',
+        eventSeverity: 'CRITICAL',
+      },
+      {
+        id: 'std-7',
+        name: 'Generate Critical Alert',
+        description: 'No-drop occlusion threshold breached. Red Critical alert & bedside buzzer alarm activated.',
+        durationSec: 3,
+        action: 'RAISE_ALERT',
+        alertType: 'BLOCKED_LINE',
+        eventType: 'BLOCKED_LINE_CRITICAL',
+        eventSeverity: 'CRITICAL',
+      },
+      {
+        id: 'std-8',
+        name: 'Initiate Nurse Notification',
+        description: 'Escalation Stage 1 activated. Automated voice call dispatched to the Duty Nurse.',
+        durationSec: 4,
+        action: 'CALL_STAGE',
+        callStage: 1,
+        eventType: 'NURSE_NOTIFIED',
+        eventSeverity: 'WARNING',
+      },
+      {
+        id: 'std-9',
+        name: 'Demonstrate Escalation',
+        description: 'Duty nurse unacknowledged timeout elapsed. Protocol escalates to Stage 2 (Ward Attendant).',
+        durationSec: 4,
+        action: 'CALL_STAGE',
+        callStage: 2,
+        eventType: 'ESCALATION_TRIGGERED',
+        eventSeverity: 'CRITICAL',
+      },
+      {
+        id: 'std-10',
+        name: 'Acknowledge Alert (Intervention Pending)',
+        description: 'Nurse acknowledges notification. Alert transitions to "Acknowledged – Intervention Pending". Problem NOT resolved.',
+        durationSec: 4,
+        action: 'ACKNOWLEDGE',
+        eventType: 'ALERT_ACKNOWLEDGED',
+        eventSeverity: 'INFO',
+      },
+      {
+        id: 'std-11',
+        name: 'Intervention & Sensor Verification',
+        description: 'Nurse straightens kinked line, records intervention, and performs mandatory sensor verification.',
+        durationSec: 4,
+        action: 'INTERVENE_VERIFY',
+        interventionActionId: 'CLEAR_KINK',
+        interventionType: 'Inspect IV tubing, straighten kinks, and clear mechanical occlusion',
+        interventionNotes: 'Patient arm repositioned; tubing unkinked and flowing freely.',
+      },
+      {
+        id: 'std-12',
+        name: 'Resume Normal Monitoring',
+        description: 'Bed 06 restored to nominal 100 mL/h baseline infusion. Continuous real-time monitoring active.',
+        durationSec: 3,
+        setpoints: {
+          actualRate: 100,
+          prescribedRate: 100,
+          remainingVolume: 390,
+          status: 'NORMAL',
+          isActive: true,
+          isPaused: false,
+          noDropDurationSec: 0,
+          abnormalFlowDurationSec: 0,
+          activeScenarioId: 'NORMAL',
+        },
+        eventType: 'INFUSION_RESUMED',
+        eventSeverity: 'SUCCESS',
+      },
+    ],
+  },
+  {
+    id: 'preset-multi-bed-round',
+    name: 'Multi-Bed Ward Round',
+    description:
+      'Demonstrates independent infusion simulations running in parallel: each bed receives a different scenario while the others continue undisturbed.',
+    targetBedId: 'bed-01',
+    steps: [
+      {
+        id: 'mb-1',
+        name: 'Bed 01 — Normal Infusion Baseline',
+        description: 'Bed 01 runs a normal infusion as the control bed for this round.',
+        durationSec: 3,
+        bedId: 'bed-01',
+        scenario: 'NORMAL',
+        eventType: 'DEMO_SCENARIO_STEP',
+        eventSeverity: 'INFO',
+      },
+      {
+        id: 'mb-2',
+        name: 'Bed 02 — Low Fluid Warning',
+        description: 'Bed 02 volume drops into the low-fluid warning window (≤ 15 minutes to empty).',
+        durationSec: 4,
+        bedId: 'bed-02',
+        scenario: 'LOW_FLUID',
+        eventType: 'DEMO_SCENARIO_STEP',
+        eventSeverity: 'WARNING',
+      },
+      {
+        id: 'mb-3',
+        name: 'Bed 03 — Blocked Line Develops',
+        description: 'Bed 03 line occludes; its no-drop timer accumulates independently of the other beds.',
+        durationSec: 4,
+        bedId: 'bed-03',
+        scenario: 'BLOCKED_LINE',
+        eventType: 'DEMO_SCENARIO_STEP',
+        eventSeverity: 'WARNING',
+      },
+      {
+        id: 'mb-4',
+        name: 'Bed 04 — High Flow Surge',
+        description: 'Bed 04 flow surges to 1.85× prescribed; the abnormal-flow timer starts on that bed only.',
+        durationSec: 4,
+        bedId: 'bed-04',
+        scenario: 'HIGH_FLOW',
+        eventType: 'DEMO_SCENARIO_STEP',
+        eventSeverity: 'WARNING',
+      },
+      {
+        id: 'mb-5',
+        name: 'Bed 05 — Low Flow Drift',
+        description: 'Bed 05 flow drifts to 0.55× prescribed while Beds 01–04 continue their own simulations.',
+        durationSec: 4,
+        bedId: 'bed-05',
+        scenario: 'LOW_FLOW',
+        eventType: 'DEMO_SCENARIO_STEP',
+        eventSeverity: 'WARNING',
+      },
+      {
+        id: 'mb-6',
+        name: 'Independent Monitoring Continues',
+        description: 'All beds keep simulating independently; detection, alerts and escalation proceed per bed.',
+        durationSec: 3,
+        bedId: 'bed-01',
+        eventType: 'DEMO_SCENARIO_STEP',
+        eventSeverity: 'INFO',
+      },
+    ],
+  },
+];
 
 const SimulationContext = createContext<SimulationContextType | null>(null);
 
@@ -759,7 +980,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const telemetryHistory = bedTelemetryHistory[selectedBedId] || [];
 
-  // Demo Scenario State (12-step guided demonstration)
+  // Demo Scenario State (guided demonstration runner)
   const [demoScenario, setDemoScenario] = useState<DemoScenarioState>({
     isActive: false,
     currentStep: 0,
@@ -768,6 +989,78 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     stepDescription: '',
     secondsRemainingInStep: 0,
   });
+
+  // Configurable Demonstration Presets (persisted to localStorage)
+  const [demoPresets, setDemoPresets] = useState<DemoPreset[]>(() => {
+    try {
+      const saved = localStorage.getItem('dripconnect_demo_presets');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed as DemoPreset[];
+      }
+    } catch {
+      // fallback to defaults
+    }
+    return DEFAULT_DEMO_PRESETS;
+  });
+
+  const [activeDemoPresetId, setActiveDemoPresetIdState] = useState<string>(() => {
+    try {
+      return localStorage.getItem('dripconnect_demo_active_preset') || DEFAULT_DEMO_PRESETS[0].id;
+    } catch {
+      return DEFAULT_DEMO_PRESETS[0].id;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dripconnect_demo_presets', JSON.stringify(demoPresets));
+    } catch {
+      // ignore
+    }
+  }, [demoPresets]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dripconnect_demo_active_preset', activeDemoPresetId);
+    } catch {
+      // ignore
+    }
+  }, [activeDemoPresetId]);
+
+  const activeDemoPreset: DemoPreset =
+    demoPresets.find(p => p.id === activeDemoPresetId) || demoPresets[0] || DEFAULT_DEMO_PRESETS[0];
+
+  const setActiveDemoPresetId = useCallback((id: string) => {
+    setActiveDemoPresetIdState(id);
+  }, []);
+
+  const saveDemoPreset = useCallback((preset: DemoPreset) => {
+    setDemoPresets(prev => {
+      const exists = prev.some(p => p.id === preset.id);
+      return exists ? prev.map(p => (p.id === preset.id ? preset : p)) : [...prev, preset];
+    });
+    setActiveDemoPresetIdState(preset.id);
+  }, []);
+
+  const deleteDemoPreset = useCallback(
+    (id: string) => {
+      setDemoPresets(prev => {
+        if (prev.length <= 1) return prev; // always keep at least one preset
+        const next = prev.filter(p => p.id !== id);
+        if (id === activeDemoPresetId && next.length > 0) {
+          setActiveDemoPresetIdState(next[0].id);
+        }
+        return next;
+      });
+    },
+    [activeDemoPresetId]
+  );
+
+  const resetDemoPresets = useCallback(() => {
+    setDemoPresets(DEFAULT_DEMO_PRESETS);
+    setActiveDemoPresetIdState(DEFAULT_DEMO_PRESETS[0].id);
+  }, []);
 
   const tickCounterRef = useRef<number>(0);
 
@@ -2116,9 +2409,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       localStorage.removeItem('dripconnect_events');
       if (purgeAll) {
         setAlerts([]);
-        localStorage.removeItem('dripconnect_alerts');
-        setTelemetryHistory([]);
-        localStorage.removeItem('dripconnect_telemetry');
+        localStorage.removeItem('dripconnect_alerts_ward_v5');
+        setBedTelemetryHistory({});
       }
     } catch {
       // ignore
@@ -2236,113 +2528,112 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     addEvent('DEMO_SCENARIO_STEP', 'INFO', 'Demo Lead', 'Guided 12-step demo scenario stopped by user.');
   }, [addEvent]);
 
-  const runDemoScenario = useCallback(() => {
-    if (demoIntervalRef.current) {
-      clearInterval(demoIntervalRef.current);
-      demoIntervalRef.current = null;
-    }
+  const demoLastResponderRef = useRef<EscalationResponder | null>(null);
+  const demoAlertTitleRef = useRef<string>('IV Infusion Alert');
 
-    setIsSimulationRunning(true);
-    setSelectedBedId('bed-06');
+  const runDemoScenario = useCallback(
+    (presetId?: string) => {
+      const preset =
+        demoPresets.find(p => p.id === (presetId || activeDemoPresetId)) ||
+        activeDemoPreset ||
+        DEFAULT_DEMO_PRESETS[0];
+      if (!preset || preset.steps.length === 0) return;
 
-    const steps = [
-      {
-        step: 1,
-        name: 'Start Normal Infusion',
-        desc: 'Bed 06 initialized to nominal 100 mL/h baseline with 0.9% Normal Saline.',
-        duration: 3,
-        action: () => {
-          setBeds(prev =>
-            prev.map(b =>
-              b.id === 'bed-06'
-                ? {
-                    ...b,
-                    prescribedRate: 100,
-                    actualRate: 100,
-                    remainingVolume: 420,
-                    initialVolume: 500,
-                    status: 'NORMAL',
-                    isActive: true,
-                    isPaused: false,
-                    noDropDurationSec: 0,
-                    abnormalFlowDurationSec: 0,
-                  }
-                : b
-            )
-          );
-          addEvent('INFUSION_STARTED', 'SUCCESS', 'Bed 06', 'Step 1/12: Normal infusion delivery initiated at 100 mL/h.');
-        },
-      },
-      {
-        step: 2,
-        name: 'Generate Flow-Rate Readings',
-        desc: 'Optical drip sensor recording steady nominal drop rate of 33 gtt/min (100.2 mL/h).',
-        duration: 3,
-        action: () => {
-          addEvent(
-            'FLOW_READING_RECORDED',
-            'INFO',
-            'Bed 06',
-            'Step 2/12: Optical sensor telemetry confirms nominal flow: 100.4 mL/h (33 drops/min).'
-          );
-        },
-      },
-      {
-        step: 3,
-        name: 'Gradually Decrease Fluid Volume',
-        desc: 'Simulating accelerated fluid delivery; reservoir drops to 120 mL to test depletion tracking.',
-        duration: 3,
-        action: () => {
-          setBeds(prev =>
-            prev.map(b => (b.id === 'bed-06' ? { ...b, remainingVolume: 120, infusedVolume: 380 } : b))
-          );
-          addEvent(
-            'FLOW_READING_RECORDED',
-            'INFO',
-            'Bed 06',
-            'Step 3/12: Reservoir volume tracking updated to 120 mL remaining (24% remaining).'
-          );
-        },
-      },
-      {
-        step: 4,
-        name: 'Simulate High-Flow Condition',
-        desc: 'Infusion rate surges to 160 mL/h (+60% above prescribed 100 mL/h), breaching safe tolerance.',
-        duration: 3,
-        action: () => {
-          setBeds(prev =>
-            prev.map(b =>
-              b.id === 'bed-06'
-                ? { ...b, actualRate: 160, dropRate: 53, abnormalFlowDurationSec: 16 }
-                : b
-            )
-          );
-          addEvent(
-            'HIGH_FLOW_DETECTED',
-            'WARNING',
-            'Bed 06',
-            'Step 4/12: High flow condition detected: 160 mL/h (+60% above prescribed limit).'
-          );
-        },
-      },
-      {
-        step: 5,
-        name: 'Generate Flow Warning Alert',
-        desc: 'Abnormal flow duration threshold (15s) exceeded. System generates amber Warning alert and chime.',
-        duration: 3,
-        action: () => {
-          const alertId = `ALT-DEMO-${Date.now().toString().slice(-4)}`;
+      if (demoIntervalRef.current) {
+        clearInterval(demoIntervalRef.current);
+        demoIntervalRef.current = null;
+      }
+
+      setIsSimulationRunning(true);
+      setSelectedBedId(preset.targetBedId);
+      demoActiveAlertIdRef.current = null;
+      demoLastResponderRef.current = null;
+
+      const DEMO_NURSE = 'Nurse Sarah Chen, RN';
+      const totalSteps = preset.steps.length;
+
+      const alertTextFor = (
+        type: AlertType,
+        bed: BedData
+      ): { severity: AlertSeverity; title: string; description: string } => {
+        switch (type) {
+          case 'HIGH_FLOW':
+            return {
+              severity: 'WARNING',
+              title: 'High Flow Rate Detected',
+              description: `Actual rate ${bed.actualRate} mL/h exceeds prescribed ${bed.prescribedRate} mL/h beyond the ±${settingsRef.current.flowRateDeviationTolerancePct}% tolerance for over ${settingsRef.current.abnormalFlowDurationThresholdSec}s.`,
+            };
+          case 'LOW_FLOW':
+            return {
+              severity: 'WARNING',
+              title: 'Low Flow Rate Detected',
+              description: `Actual rate ${bed.actualRate} mL/h is below the prescribed ${bed.prescribedRate} mL/h beyond the ±${settingsRef.current.flowRateDeviationTolerancePct}% tolerance for over ${settingsRef.current.abnormalFlowDurationThresholdSec}s.`,
+            };
+          case 'BLOCKED_LINE':
+            return {
+              severity: 'CRITICAL',
+              title: 'Blocked or Kinked IV Line',
+              description: `No drops registered by optical sensor for over ${settingsRef.current.blockedLineDurationThresholdSec} seconds. Verify clamp and line patency.`,
+            };
+          case 'EMPTY_BOTTLE':
+            return {
+              severity: 'CRITICAL',
+              title: 'Empty IV Bottle',
+              description: 'Simulated fluid volume has reached zero. Replace the IV container immediately.',
+            };
+          case 'LOW_FLUID':
+            return {
+              severity: 'WARNING',
+              title: 'Low Fluid Warning',
+              description: `Estimated time to empty is ${settingsRef.current.lowFluidWarningMinutesThreshold} minutes or less. Prepare a replacement bag.`,
+            };
+          default:
+            return {
+              severity: 'INFO',
+              title: 'Sensor Alert',
+              description: 'A simulated sensor condition requires bedside review.',
+            };
+        }
+      };
+
+      const executeStep = (step: DemoPresetStep, index: number) => {
+        const bedId = step.bedId || preset.targetBedId;
+        const bedSnapshot = bedsRef.current.find(b => b.id === bedId) || bedsRef.current[0];
+        if (!bedSnapshot) return;
+        const bedNumber = bedSnapshot.bedNumber;
+
+        // 1. Apply scenario config and/or direct setpoints to the target bed.
+        let mergedBed: BedData = { ...bedSnapshot };
+        if (step.scenario) {
+          mergedBed = { ...mergedBed, ...SIMULATION_SCENARIOS[step.scenario].applyScenario(mergedBed) };
+        }
+        if (step.setpoints) {
+          mergedBed = { ...mergedBed, ...step.setpoints };
+        }
+        if (step.scenario || step.setpoints) {
+          const finalBed = mergedBed;
+          setBeds(prev => prev.map(b => (b.id === bedId ? finalBed : b)));
+        }
+
+        // 2. Perform the step's workflow action, if any.
+        if (step.action === 'RAISE_ALERT' && step.alertType) {
+          const alertId = `ALT-DEMO-${Date.now().toString().slice(-4)}-${index + 1}`;
           demoActiveAlertIdRef.current = alertId;
+          const meta = alertTextFor(step.alertType, mergedBed);
+          demoAlertTitleRef.current = meta.title;
+          const channelUsed = settingsRef.current.internetAvailable
+            ? 'WHATSAPP_VOICE'
+            : 'GSM_VOICE_AND_SMS';
           const newAlert: AlertItem = {
             id: alertId,
-            bedId: 'bed-06',
-            bedNumber: 'Bed 06',
-            patientName: 'Alexander Sterling',
-            patientMrn: 'MRN-84920',
-            type: 'HIGH_FLOW',
-            severity: 'WARNING',
-            title: 'High Flow Rate Detected',
-            description: 'Actual rate 160 mL/h exceeds prescribed 100 mL/h (+60%) for over 15s.',
+            bedId,
+            bedNumber,
+            patientName: mergedBed.patient.name,
+            patientMrn: mergedBed.patient.mrn,
+            type: step.alertType,
+            severity: meta.severity,
+            title: meta.title,
+            description: meta.description,
             triggeredAt: new Date().toISOString(),
             timestampMs: Date.now(),
             workflowStatus: 'ACTIVE_UNACKNOWLEDGED',
@@ -2352,308 +2643,164 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             isResolved: false,
             escalationStage: 'BUZZER_ACTIVE',
             escalationSeconds: 0,
-            communicationChannelUsed: 'WHATSAPP_VOICE',
-            timeline: [{ time: new Date().toLocaleTimeString(), action: 'Warning alert generated: High Flow Rate' }],
-          };
-          setAlerts(prev => [newAlert, ...prev]);
-          audioService.playWarningChime(true, 0.8);
-          addEvent(
-            'ALERT_GENERATED',
-            'WARNING',
-            'Bed 06',
-            'Step 5/12: Flow warning alert generated: Over-infusion detected.',
-            `Alert ID: ${alertId}`,
-            alertId
-          );
-        },
-      },
-      {
-        step: 6,
-        name: 'Simulate Blocked IV Line',
-        desc: 'Simulating line occlusion / tube kinking. Optical drop chamber registers 0 drops/min.',
-        duration: 3,
-        action: () => {
-          setBeds(prev =>
-            prev.map(b =>
-              b.id === 'bed-06'
-                ? { ...b, actualRate: 0, dropRate: 0, noDropDurationSec: 22, status: 'CRITICAL' }
-                : b
-            )
-          );
-          addEvent(
-            'BLOCKED_LINE_CRITICAL',
-            'CRITICAL',
-            'Bed 06',
-            'Step 6/12: Blocked line condition: 0 drops/min for >20 seconds.'
-          );
-        },
-      },
-      {
-        step: 7,
-        name: 'Generate Critical Alert',
-        desc: 'No-drop occlusion threshold breached. Red Critical alert & bedside buzzer alarm activated.',
-        duration: 3,
-        action: () => {
-          const alertId = `ALT-DEMO-${Date.now().toString().slice(-4)}`;
-          demoActiveAlertIdRef.current = alertId;
-          const newAlert: AlertItem = {
-            id: alertId,
-            bedId: 'bed-06',
-            bedNumber: 'Bed 06',
-            patientName: 'Alexander Sterling',
-            patientMrn: 'MRN-84920',
-            type: 'BLOCKED_LINE',
-            severity: 'CRITICAL',
-            title: 'Blocked or Kinked IV Line',
-            description: 'No drops registered by optical sensor for 22 seconds. Verify clamp and line patency.',
-            triggeredAt: new Date().toISOString(),
-            timestampMs: Date.now(),
-            workflowStatus: 'ACTIVE_UNACKNOWLEDGED',
-            isAcknowledged: false,
-            acknowledgedSecondsElapsed: 0,
-            isOverdue: false,
-            isResolved: false,
-            escalationStage: 'BUZZER_ACTIVE',
-            escalationSeconds: 0,
-            communicationChannelUsed: 'WHATSAPP_VOICE',
+            communicationChannelUsed: channelUsed,
             timeline: [
-              { time: new Date().toLocaleTimeString(), action: 'Critical occlusion alert generated' },
-              { time: new Date().toLocaleTimeString(), action: 'Bedside visual alarm and buzzer sounded' },
+              {
+                time: new Date().toLocaleTimeString(),
+                action: `Alert generated (demo preset "${preset.name}"): ${meta.title}`,
+              },
+              {
+                time: new Date().toLocaleTimeString(),
+                action: 'Bedside visual alarm and buzzer sounded',
+              },
             ],
           };
           setAlerts(prev => [newAlert, ...prev]);
-          setBuzzerActive(true);
-          audioService.playCriticalAlarm(true, 0.8);
-          addEvent(
-            'BLOCKED_LINE_CRITICAL',
-            'CRITICAL',
-            'Bed 06',
-            'Step 7/12: Critical alert triggered: Blocked or kinked IV line. Bedside buzzer sounding.',
-            `Alert ID: ${alertId}`,
-            alertId
-          );
-        },
-      },
-      {
-        step: 8,
-        name: 'Initiate Nurse Notification',
-        desc: 'Escalation Stage 1 activated. Automated WhatsApp voice call dispatched to Duty Nurse.',
-        duration: 4,
-        action: () => {
-          const resp = activeResponders[0];
-          const callState: ActiveCallState = {
-            alertId: demoActiveAlertIdRef.current || 'ALT-DEMO',
-            responder: resp,
-            stageName: `Stage 1 · ${resp.role}`,
-            stageNumber: 1,
-            secondsElapsed: 0,
-            channel: 'WHATSAPP_VOICE',
-            isRinging: true,
-            alertTitle: 'Blocked or Kinked IV Line',
-            bedNumber: 'Bed 06',
-            patientName: 'Alexander Sterling',
-            shift: activeShift,
-            simulatedCallVolume: 80,
-            staffingLevelPct: activeStaffingLevel,
-            targetResponseTimeSec: 3,
-            callStatus: 'RINGING',
-          };
-          setActiveCall(callState);
-          audioService.playPhoneRing(true, 0.8);
-          addEvent(
-            'NURSE_NOTIFIED',
-            'WARNING',
-            'Bed 06',
-            `Step 8/12: Escalation Stage 1: Dispatched simulated WhatsApp voice call to ${resp.role} (${resp.name}).`,
-            `Alert ID: ${demoActiveAlertIdRef.current}`,
-            demoActiveAlertIdRef.current || undefined,
-            resp.name
-          );
-        },
-      },
-      {
-        step: 9,
-        name: 'Demonstrate Escalation',
-        desc: 'Duty nurse unacknowledged timeout elapsed. Protocol escalates to Stage 2 (Ward Attendant).',
-        duration: 4,
-        action: () => {
-          const resp = activeResponders[1];
-          const callState: ActiveCallState = {
-            alertId: demoActiveAlertIdRef.current || 'ALT-DEMO',
-            responder: resp,
-            stageName: `Stage 2 · ${resp.role}`,
-            stageNumber: 2,
-            secondsElapsed: 0,
-            channel: 'WHATSAPP_VOICE',
-            isRinging: true,
-            alertTitle: 'Blocked or Kinked IV Line (Escalated)',
-            bedNumber: 'Bed 06',
-            patientName: 'Alexander Sterling',
-            shift: activeShift,
-            simulatedCallVolume: 80,
-            staffingLevelPct: activeStaffingLevel,
-            targetResponseTimeSec: 3,
-            callStatus: 'RINGING',
-          };
-          setActiveCall(callState);
-          audioService.playPhoneRing(true, 0.8);
-          addEvent(
-            'ESCALATION_TRIGGERED',
-            'CRITICAL',
-            'Bed 06',
-            `Step 9/12: Escalation Stage 2: Alert unacknowledged; escalating to ${resp.role} (${resp.name}).`,
-            `Alert ID: ${demoActiveAlertIdRef.current}`,
-            demoActiveAlertIdRef.current || undefined,
-            resp.name
-          );
-        },
-      },
-      {
-        step: 10,
-        name: 'Acknowledge Alert (Intervention Pending)',
-        desc: 'Nurse acknowledges notification. Alert transitions to "Acknowledged – Intervention Pending". Problem NOT resolved.',
-        duration: 4,
-        action: () => {
+          if (meta.severity === 'CRITICAL') {
+            setBuzzerActive(true);
+            audioService.playCriticalAlarm(settingsRef.current.soundNotificationsEnabled, 0.8);
+          } else {
+            audioService.playWarningChime(settingsRef.current.soundNotificationsEnabled, 0.8);
+          }
+        } else if (step.action === 'CALL_STAGE') {
+          const stage = step.callStage || 1;
+          const resp = activeResponders[Math.min(stage - 1, activeResponders.length - 1)];
+          if (resp) {
+            demoLastResponderRef.current = resp;
+            const channelUsed = settingsRef.current.internetAvailable
+              ? 'WHATSAPP_VOICE'
+              : 'GSM_VOICE_AND_SMS';
+            setActiveCall({
+              alertId: demoActiveAlertIdRef.current || 'ALT-DEMO',
+              responder: resp,
+              stageName: `Stage ${stage} · ${resp.role}`,
+              stageNumber: stage,
+              secondsElapsed: 0,
+              channel: channelUsed,
+              isRinging: true,
+              alertTitle:
+                stage > 1 ? `${demoAlertTitleRef.current} (Escalated)` : demoAlertTitleRef.current,
+              bedNumber,
+              patientName: mergedBed.patient.name,
+              shift: activeShift,
+              simulatedCallVolume,
+              staffingLevelPct: activeStaffingLevel,
+              targetResponseTimeSec: activeCallResponseTime,
+              callStatus: 'RINGING',
+            });
+            audioService.playPhoneRing(settingsRef.current.soundNotificationsEnabled, 0.8);
+          }
+        } else if (step.action === 'ACKNOWLEDGE') {
           if (demoActiveAlertIdRef.current) {
-            acknowledgeAlert(demoActiveAlertIdRef.current, activeResponders[1].name);
+            acknowledgeAlert(
+              demoActiveAlertIdRef.current,
+              demoLastResponderRef.current?.name || activeResponders[0]?.name
+            );
           }
           setActiveCall(null);
-          addEvent(
-            'ALERT_ACKNOWLEDGED',
-            'INFO',
-            'Bed 06',
-            `Step 10/12: Alert acknowledged by ${activeResponders[1].name}. Notification confirmed. Bedside intervention pending.`,
-            `Alert ID: ${demoActiveAlertIdRef.current}`,
-            demoActiveAlertIdRef.current || undefined,
-            activeResponders[1].name
-          );
-        },
-      },
-      {
-        step: 11,
-        name: 'Intervention & Sensor Verification',
-        desc: 'Nurse straightens kinked line, records intervention, and performs mandatory sensor verification.',
-        duration: 4,
-        action: () => {
-          if (demoActiveAlertIdRef.current) {
-            beginIntervention(demoActiveAlertIdRef.current, 'Nurse Sarah Chen, RN');
+        } else if (step.action === 'INTERVENE_VERIFY') {
+          const alertId = demoActiveAlertIdRef.current;
+          if (alertId) {
+            beginIntervention(alertId, DEMO_NURSE);
             recordIntervention(
-              demoActiveAlertIdRef.current,
-              'Inspect IV tubing, straighten kinks, and clear mechanical occlusion',
-              'Patient arm repositioned; tubing unkinked and flowing freely.',
-              'Nurse Sarah Chen, RN',
-              'CLEAR_KINK'
+              alertId,
+              step.interventionType ||
+                'Inspect IV tubing, straighten kinks, and clear mechanical occlusion',
+              step.interventionNotes || 'Bedside intervention completed during guided demonstration.',
+              DEMO_NURSE,
+              step.interventionActionId || 'CLEAR_KINK'
             );
-            verifyAlertResolution(demoActiveAlertIdRef.current, 'Nurse Sarah Chen, RN');
+            // Verify after a short delay so the corrective bed state applied by
+            // recordIntervention has rendered and bedsRef reflects it; verifying
+            // synchronously would read the pre-intervention telemetry and fail.
+            window.setTimeout(() => {
+              verifyAlertResolution(alertId, DEMO_NURSE);
+            }, 700);
           }
-          addEvent(
-            'VERIFICATION_PASSED',
-            'SUCCESS',
-            'Bed 06',
-            'Step 11/12: Bedside intervention verified: 33 gtt/min resumed. Alert marked Resolved – Verification Passed.',
-            `Alert ID: ${demoActiveAlertIdRef.current}`,
-            demoActiveAlertIdRef.current || undefined,
-            'Nurse Sarah Chen, RN'
-          );
-        },
-      },
-      {
-        step: 12,
-        name: 'Resume Normal Monitoring',
-        desc: 'Bed 06 restored to nominal 100 mL/h baseline infusion. Continuous real-time monitoring active.',
-        duration: 3,
-        action: () => {
-          setBeds(prev =>
-            prev.map(b =>
-              b.id === 'bed-06'
-                ? {
-                    ...b,
-                    actualRate: 100,
-                    prescribedRate: 100,
-                    remainingVolume: 390,
-                    status: 'NORMAL',
-                    isActive: true,
-                    isPaused: false,
-                    noDropDurationSec: 0,
-                    abnormalFlowDurationSec: 0,
-                    activeScenarioId: 'NORMAL',
-                  }
-                : b
-            )
-          );
-          addEvent(
-            'INFUSION_RESUMED',
-            'SUCCESS',
-            'Bed 06',
-            'Step 12/12: Guided demonstration completed. Bed 06 running smoothly at nominal 100 mL/h.'
-          );
-        },
-      },
-    ];
-
-    let currentStepIndex = 0;
-    let stepSecRemaining = steps[0].duration;
-
-    steps[0].action();
-    setDemoScenario({
-      isActive: true,
-      currentStep: 1,
-      totalSteps: 12,
-      stepName: steps[0].name,
-      stepDescription: steps[0].desc,
-      secondsRemainingInStep: stepSecRemaining,
-    });
-
-    demoIntervalRef.current = setInterval(() => {
-      stepSecRemaining -= 1;
-
-      if (stepSecRemaining <= 0) {
-        currentStepIndex += 1;
-        if (currentStepIndex >= steps.length) {
-          if (demoIntervalRef.current) {
-            clearInterval(demoIntervalRef.current);
-            demoIntervalRef.current = null;
-          }
-          setDemoScenario({
-            isActive: false,
-            currentStep: 12,
-            totalSteps: 12,
-            stepName: 'Demo Completed',
-            stepDescription: 'All 12 simulation stages executed successfully.',
-            secondsRemainingInStep: 0,
-          });
-          return;
         }
 
-        const nextStep = steps[currentStepIndex];
-        stepSecRemaining = nextStep.duration;
-        nextStep.action();
+        // 3. Narrate the step in the event history.
+        addEvent(
+          step.eventType || 'DEMO_SCENARIO_STEP',
+          step.eventSeverity || 'INFO',
+          bedNumber,
+          `Step ${index + 1}/${totalSteps} (${preset.name}): ${step.name} — ${step.description}`,
+          demoActiveAlertIdRef.current ? `Alert ID: ${demoActiveAlertIdRef.current}` : undefined,
+          demoActiveAlertIdRef.current || undefined,
+          demoLastResponderRef.current?.name
+        );
+      };
 
-        setDemoScenario({
-          isActive: true,
-          currentStep: nextStep.step,
-          totalSteps: 12,
-          stepName: nextStep.name,
-          stepDescription: nextStep.desc,
-          secondsRemainingInStep: stepSecRemaining,
-        });
-      } else {
-        setDemoScenario(prev => ({
-          ...prev,
-          secondsRemainingInStep: stepSecRemaining,
-        }));
-      }
-    }, 1000);
-  }, [
-    activeResponders,
-    activeShift,
-    activeStaffingLevel,
-    acknowledgeAlert,
-    beginIntervention,
-    recordIntervention,
-    verifyAlertResolution,
-    addEvent,
-  ]);
+      let currentStepIndex = 0;
+      let stepSecRemaining = Math.max(1, preset.steps[0].durationSec || 3);
+
+      executeStep(preset.steps[0], 0);
+      setDemoScenario({
+        isActive: true,
+        currentStep: 1,
+        totalSteps,
+        stepName: preset.steps[0].name,
+        stepDescription: preset.steps[0].description,
+        secondsRemainingInStep: stepSecRemaining,
+      });
+
+      demoIntervalRef.current = setInterval(() => {
+        stepSecRemaining -= 1;
+
+        if (stepSecRemaining <= 0) {
+          currentStepIndex += 1;
+          if (currentStepIndex >= totalSteps) {
+            if (demoIntervalRef.current) {
+              clearInterval(demoIntervalRef.current);
+              demoIntervalRef.current = null;
+            }
+            setDemoScenario({
+              isActive: false,
+              currentStep: totalSteps,
+              totalSteps,
+              stepName: 'Demo Completed',
+              stepDescription: `All ${totalSteps} steps of "${preset.name}" executed successfully.`,
+              secondsRemainingInStep: 0,
+            });
+            return;
+          }
+
+          const nextStep = preset.steps[currentStepIndex];
+          stepSecRemaining = Math.max(1, nextStep.durationSec || 3);
+          executeStep(nextStep, currentStepIndex);
+
+          setDemoScenario({
+            isActive: true,
+            currentStep: currentStepIndex + 1,
+            totalSteps,
+            stepName: nextStep.name,
+            stepDescription: nextStep.description,
+            secondsRemainingInStep: stepSecRemaining,
+          });
+        } else {
+          setDemoScenario(prev => ({
+            ...prev,
+            secondsRemainingInStep: stepSecRemaining,
+          }));
+        }
+      }, 1000);
+    },
+    [
+      demoPresets,
+      activeDemoPresetId,
+      activeDemoPreset,
+      activeResponders,
+      activeShift,
+      activeStaffingLevel,
+      activeCallResponseTime,
+      simulatedCallVolume,
+      acknowledgeAlert,
+      beginIntervention,
+      recordIntervention,
+      verifyAlertResolution,
+      addEvent,
+    ]
+  );
 
   return (
     <SimulationContext.Provider
@@ -2705,6 +2852,13 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         resetSimulationEngine,
         runDemoScenario,
         stopDemoScenario,
+        demoPresets,
+        activeDemoPresetId,
+        activeDemoPreset,
+        setActiveDemoPresetId,
+        saveDemoPreset,
+        deleteDemoPreset,
+        resetDemoPresets,
         acknowledgeAlert,
         beginIntervention,
         recordIntervention,

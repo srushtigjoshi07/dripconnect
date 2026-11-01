@@ -274,3 +274,66 @@ export interface SimulationScenarioConfig {
   expectedBehavior: string;
   applyScenario: (bed: BedData) => Partial<BedData>;
 }
+
+// ---------------------------------------------------------------------------
+// Configurable Demonstration Presets
+// A preset is a named, editable sequence of steps executed by the demo
+// runner against one or more beds. Steps are data (not code) so evaluators
+// can build their own demonstrations without touching the engine.
+// ---------------------------------------------------------------------------
+
+export type DemoStepAction =
+  | 'NONE'
+  | 'RAISE_ALERT'
+  | 'CALL_STAGE'
+  | 'ACKNOWLEDGE'
+  | 'INTERVENE_VERIFY';
+
+export interface DemoPresetStep {
+  id: string;
+  name: string;
+  description: string;
+  durationSec: number;
+  /** Bed this step acts on. Defaults to the preset's targetBedId. */
+  bedId?: string;
+  /** Apply one of the built-in scenario configs (services/scenarios) to the bed. */
+  scenario?: ScenarioType;
+  /** Direct bed setpoints applied after the scenario (if any). */
+  setpoints?: Partial<
+    Pick<
+      BedData,
+      | 'prescribedRate'
+      | 'actualRate'
+      | 'dropRate'
+      | 'remainingVolume'
+      | 'initialVolume'
+      | 'infusedVolume'
+      | 'status'
+      | 'noDropDurationSec'
+      | 'abnormalFlowDurationSec'
+      | 'isActive'
+      | 'isPaused'
+      | 'activeScenarioId'
+    >
+  >;
+  action?: DemoStepAction;
+  /** For RAISE_ALERT steps. */
+  alertType?: AlertType;
+  /** For CALL_STAGE steps: 1 = Duty Nurse, 2 = Ward Attendant, 3 = Senior Nurse. */
+  callStage?: 1 | 2 | 3;
+  /** For INTERVENE_VERIFY steps: corrective action applied by recordIntervention. */
+  interventionActionId?: string;
+  interventionType?: string;
+  interventionNotes?: string;
+  /** Optional event-log narration emitted when the step runs. */
+  eventType?: EventLogEntry['eventType'];
+  eventSeverity?: EventLogEntry['severity'];
+}
+
+export interface DemoPreset {
+  id: string;
+  name: string;
+  description: string;
+  targetBedId: string;
+  steps: DemoPresetStep[];
+}
