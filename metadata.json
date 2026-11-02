@@ -1,6 +1,0 @@
-{
-  "name": "DripConnect – Intelligent IV Infusion Monitoring",
-  "description": "Intelligent IV Infusion Monitoring and Automated Nurse Response System simulation prototype for healthcare environments.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
