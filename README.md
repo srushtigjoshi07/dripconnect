@@ -6,12 +6,13 @@ build — nurse Asha Verma, 12-bed demonstration hospital). It is a separate
 codebase from the `main` branch app.
 
 - `client/` — React 19 + TypeScript front end (simulation engine, 3D ward)
-- `server/` — typed actions layer (state persistence)
-- `drizzle/` — database schema/migrations
+- State is kept in the browser (localStorage, key
+  `dripconnect-browser-state-v1`), seeded in code — the client makes no
+  server calls, so the built front end runs on any static hosting.
+- `server/` and `drizzle/` — the original server-actions persistence layer,
+  kept for reference; the client no longer calls it.
 
-It runs on the Muse spaces runtime (`@hatch/space-sdk` is a local runtime
-package, so `bun install` outside Muse will not resolve it). The built
-front end is deployed for preview at
-https://srushtigjoshi07.github.io/dripconnect/beta/ — note the preview is
-static hosting: pages and the in-browser simulation load, but the server
-actions/database of the Muse runtime do not run there.
+Live preview of the built front end:
+https://srushtigjoshi07.github.io/dripconnect/beta/
+State there is per-browser: each visitor starts from the seed ward and
+their simulation is saved only in their own browser.
